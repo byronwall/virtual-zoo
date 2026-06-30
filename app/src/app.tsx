@@ -8,7 +8,6 @@ import {
   onCleanup,
   onMount,
 } from "solid-js";
-import { ConsoleLogCaptureProvider } from "./components/ui";
 import { GlobalErrorOverlay } from "./components/errors/GlobalErrorOverlay";
 
 import "./index.css";
@@ -90,7 +89,6 @@ export default function App() {
         )}
       >
         <FileRoutes />
-        <ConsoleLogCaptureProvider />
       </Router>
     </MetaProvider>
   );
