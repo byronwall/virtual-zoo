@@ -6,6 +6,7 @@ export const input = {
   base: {
     appearance: "none",
     borderRadius: "l2",
+    fontSize: "max(1rem, 16px)",
     height: "var(--input-height)",
     minHeight: "var(--input-height)",
     minW: "var(--input-height)",
@@ -77,9 +78,9 @@ export const input = {
       },
     },
     size: {
-      "2xs": { textStyle: "xs", px: "1.5", "--input-height": "sizes.7" },
-      xs: { textStyle: "sm", px: "2", "--input-height": "sizes.8" },
-      sm: { textStyle: "sm", px: "2.5", "--input-height": "sizes.9" },
+      "2xs": { textStyle: "md", px: "1.5", "--input-height": "sizes.9" },
+      xs: { textStyle: "md", px: "2", "--input-height": "sizes.9" },
+      sm: { textStyle: "md", px: "2.5", "--input-height": "sizes.9" },
       md: { textStyle: "md", px: "3", "--input-height": "sizes.10" },
       lg: { textStyle: "md", px: "3.5", "--input-height": "sizes.11" },
       xl: { textStyle: "lg", px: "4", "--input-height": "sizes.12" },

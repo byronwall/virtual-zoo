@@ -2,8 +2,9 @@ import { For, Show, createMemo } from "solid-js";
 import { CalendarDays, Trash2 } from "lucide-solid";
 import { css } from "styled-system/css";
 import { Box, HStack, VStack } from "styled-system/jsx";
-import { Button, IconButton, Input, Text, Textarea } from "~/components/ui";
+import { Button, CloseButton, IconButton, Input, Text, Textarea } from "~/components/ui";
 import type { ClientAnimal } from "./types";
+import { AsyncThumbnailImage } from "./AsyncThumbnailImage";
 
 type DetailPaneProps = {
   animals: ClientAnimal[];
@@ -15,6 +16,7 @@ type DetailPaneProps = {
   onSaveAnimal: () => void;
   onLogSleepover: () => void;
   onDeleteAnimal: () => void;
+  onCloseAnimal: () => void;
 };
 
 export function DetailPane(props: DetailPaneProps) {
@@ -47,8 +49,18 @@ export function DetailPane(props: DetailPaneProps) {
       >
         {(animal) => (
           <VStack alignItems="stretch" gap="5">
+            <CloseButton
+              class={closeAnimalButtonClass}
+              aria-label={`Close ${animal().name} details`}
+              onClick={props.onCloseAnimal}
+            />
             <Box class={stickerPreviewClass}>
-              <img src={animal().image.stickerUrl} alt={animal().name} />
+              <img
+                src={animal().image.stickerUrl}
+                alt={animal().name}
+                loading="eager"
+                decoding="async"
+              />
             </Box>
 
             <VStack alignItems="stretch" gap="3">
@@ -154,8 +166,9 @@ function SleepCalendar(props: {
               <Box class={sleepPileClass}>
                 <For each={sleepers().slice(0, 4)}>
                   {(animal, index) => (
-                    <img
-                      src={animal.image.stickerUrl}
+                    <AsyncThumbnailImage
+                      src={animal.image.thumbnailUrl}
+                      fallbackSrc={animal.image.stickerUrl}
                       alt={animal.name}
                       style={{
                         transform: `translateX(${index() * -8}px) rotate(${index() % 2 === 0 ? -6 : 6}deg)`,
@@ -193,19 +206,32 @@ const lastDays = (count: number) => {
 };
 
 const paneClass = css({
-  h: { base: "auto", md: "calc(100dvh - 32px)" },
+  position: "relative",
+  w: "full",
+  h: "full",
+  minW: "0",
+  minH: "0",
+  maxW: "100%",
   overflowY: "auto",
+  overflowX: "hidden",
   borderRadius: "2xl",
-  borderWidth: "1px",
+  borderWidth: "2px",
   borderColor: "orange.subtle.border",
   bg: "bg.default",
   p: { base: "4", md: "5" },
-  boxShadow: "lg",
+  boxShadow: "0 18px 48px rgba(216, 87, 42, .14)",
+});
+
+const closeAnimalButtonClass = css({
+  position: "absolute",
+  top: "3",
+  right: "3",
+  zIndex: "1",
 });
 
 const sectionTitleClass = css({
   fontSize: "xl",
-  fontWeight: "bold",
+  fontWeight: "extrabold",
   color: "fg.default",
 });
 
@@ -214,7 +240,9 @@ const stickerPreviewClass = css({
   placeItems: "center",
   minH: "220px",
   borderRadius: "xl",
-  bg: "orange.subtle.bg",
+  bg: "amber.subtle.bg",
+  backgroundImage:
+    "radial-gradient(circle at 26% 18%, rgba(255,255,255,.78) 0 2rem, transparent 2.2rem), radial-gradient(circle at 78% 22%, rgba(255, 112, 67, .18) 0 3.5rem, transparent 3.8rem)",
   overflow: "hidden",
   "& img": {
     maxW: "90%",
@@ -227,14 +255,14 @@ const stickerPreviewClass = css({
 const labelClass = css({
   display: "block",
   mb: "1.5",
-  fontWeight: "bold",
-  color: "fg.default",
+  fontWeight: "extrabold",
+  color: "orange.default",
 });
 
 const quietNoteClass = css({
   borderRadius: "lg",
   bg: "amber.subtle.bg",
-  color: "amber.subtle.fg",
+  color: "amber.default",
   px: "3",
   py: "2",
   fontWeight: "semibold",
@@ -252,17 +280,17 @@ const calendarClass = css({
 const dayClass = css({
   minH: "72px",
   borderRadius: "lg",
-  borderWidth: "1px",
-  borderColor: "border",
-  bg: "bg.subtle",
+  borderWidth: "2px",
+  borderColor: "amber.subtle.border",
+  bg: "amber.subtle.bg",
   p: "2",
   overflow: "hidden",
 });
 
 const dayLabelClass = css({
   fontSize: "xs",
-  fontWeight: "bold",
-  color: "fg.muted",
+  fontWeight: "extrabold",
+  color: "orange.default",
   mb: "1",
 });
 

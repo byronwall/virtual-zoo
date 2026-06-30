@@ -8,20 +8,18 @@ export const textStyles = defineTextStyles({
   xl: { value: { fontSize: "xl", lineHeight: "1.875rem" } },
   "2xl": { value: { fontSize: "2xl", lineHeight: "2rem" } },
   "3xl": { value: { fontSize: "3xl", lineHeight: "2.375rem" } },
-  "4xl": {
-    value: { fontSize: "4xl", lineHeight: "2.75rem", letterSpacing: "-0.02em" },
-  },
+  "4xl": { value: { fontSize: "4xl", lineHeight: "2.75rem" } },
   "5xl": {
-    value: { fontSize: "5xl", lineHeight: "3.75rem", letterSpacing: "-0.02em" },
+    value: { fontSize: "5xl", lineHeight: "3.75rem" },
   },
   "6xl": {
-    value: { fontSize: "6xl", lineHeight: "4.5rem", letterSpacing: "-0.02em" },
+    value: { fontSize: "6xl", lineHeight: "4.5rem" },
   },
   "7xl": {
-    value: { fontSize: "7xl", lineHeight: "5.75rem", letterSpacing: "-0.02em" },
+    value: { fontSize: "7xl", lineHeight: "5.75rem" },
   },
 
   label: {
-    value: { fontSize: "sm", lineHeight: "1.25rem", fontWeight: "medium" },
+    value: { fontSize: "md", lineHeight: "1.5rem", fontWeight: "semibold" },
   },
 });

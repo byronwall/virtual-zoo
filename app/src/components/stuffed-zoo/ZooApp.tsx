@@ -1,11 +1,13 @@
-import { createEffect, createResource, createSignal, For, Show, onMount } from "solid-js";
+import { createEffect, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Camera, Plus, ShieldCheck } from "lucide-solid";
-import { css } from "styled-system/css";
 import { Box, Grid, HStack, VStack } from "styled-system/jsx";
 import { Button, Input, SimpleDialog, Text, Textarea } from "~/components/ui";
 import { ZooCanvas } from "./ZooCanvas";
 import { DetailPane } from "./DetailPane";
+import { appContentClass, appFrameClass, appHeaderClass, appShellClass, appTitleClass } from "./ZooApp.styles";
+import { deletePromptClass, errorClass, labelClass, passcodeBoxClass } from "./ZooApp.styles";
+import { passcodeShellClass, photoMediaRowClass, photoPickerClass, photoPreviewClass, typeQuickPickRowClass } from "./ZooApp.styles";
 import type { ClientAnimal, ZooSnapshot } from "./types";
 
 type Draft = {
@@ -18,7 +20,9 @@ type UploadDraft = Draft & {
   photo: File | null;
 };
 
-const emptyDraft = (): Draft => ({ name: "", type: "cat", notes: "" });
+const commonAnimalTypes = ["bear", "dog", "cat", "bunny", "dinosaur", "unicorn", "horse", "lion"];
+
+const emptyDraft = (): Draft => ({ name: "", type: "", notes: "" });
 const emptyUploadDraft = (): UploadDraft => ({ ...emptyDraft(), photo: null });
 
 export function ZooApp() {
@@ -158,7 +162,7 @@ export function ZooApp() {
   };
 
   return (
-    <Box minH="dvh" bg="amber.subtle.bg" color="fg.default">
+    <Box class={appShellClass}>
       <Show
         when={session.latest?.authenticated}
         fallback={
@@ -170,19 +174,25 @@ export function ZooApp() {
           />
         }
       >
-        <VStack alignItems="stretch" gap="3" p={{ base: "3", md: "4" }}>
-          <HStack justifyContent="space-between" gap="3" flexWrap="wrap">
+        <VStack class={appFrameClass} alignItems="stretch" gap="3" p={{ base: "3", md: "4" }}>
+          <HStack class={appHeaderClass} justifyContent="space-between" gap="3">
             <Box>
               <Box class={appTitleClass}>Violet's Stuffed Animal Zoo</Box>
               <Text color="fg.muted">Move friends around, add photos, and track sleepovers.</Text>
             </Box>
-            <Button size="lg" onClick={() => setUploadOpen(true)}>
+            <Button
+              size="lg"
+              onClick={() => {
+                setUploadDraft(emptyUploadDraft());
+                setUploadOpen(true);
+              }}
+            >
               <Plus size={20} />
               Add friend
             </Button>
           </HStack>
 
-          <Grid gridTemplateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 360px" }} gap="4">
+          <Grid class={appContentClass} gap="4">
             <ZooCanvas
               animals={animals()}
               selectedAnimalId={selectedAnimalId()}
@@ -199,6 +209,7 @@ export function ZooApp() {
               onSaveAnimal={handleSaveAnimal}
               onLogSleepover={handleLogSleepover}
               onDeleteAnimal={handleDelete}
+              onCloseAnimal={() => setSelectedAnimalId(null)}
             />
           </Grid>
         </VStack>
@@ -207,7 +218,6 @@ export function ZooApp() {
       <UploadDialog
         open={uploadOpen()}
         draft={uploadDraft}
-        customTypes={customTypes()}
         busy={busy()}
         onClose={() => setUploadOpen(false)}
         onDraftChange={(field, value) => setUploadDraft(field, value)}
@@ -260,13 +270,26 @@ function PasscodeView(props: {
 function UploadDialog(props: {
   open: boolean;
   draft: UploadDraft;
-  customTypes: string[];
   busy: boolean;
   onClose: () => void;
   onDraftChange: (field: "name" | "type" | "notes", value: string) => void;
   onPhotoChange: (photo: File | null) => void;
   onUpload: () => void;
 }) {
+  const [previewUrl, setPreviewUrl] = createSignal<string | null>(null);
+
+  createEffect(() => {
+    const photo = props.draft.photo;
+    if (!photo) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(photo);
+    setPreviewUrl(url);
+    onCleanup(() => URL.revokeObjectURL(url));
+  });
+
   return (
     <SimpleDialog
       open={props.open}
@@ -285,16 +308,23 @@ function UploadDialog(props: {
       }
     >
       <VStack alignItems="stretch" gap="4" w="full">
-        <label class={photoPickerClass}>
-          <Camera size={22} />
-          <span>{props.draft.photo ? props.draft.photo.name : "Take or choose a photo"}</span>
-          <input
-            type="file"
-            accept="image/*,.heic,.heif"
-            capture="environment"
-            onChange={(event) => props.onPhotoChange(event.currentTarget.files?.[0] ?? null)}
-          />
-        </label>
+        <Box class={photoMediaRowClass}>
+          <label class={photoPickerClass}>
+            <Camera size={22} />
+            <span>{props.draft.photo ? props.draft.photo.name : "Take or choose a photo"}</span>
+            <input
+              type="file"
+              accept="image/*,.heic,.heif"
+              capture="environment"
+              onChange={(event) => props.onPhotoChange(event.currentTarget.files?.[0] ?? null)}
+            />
+          </label>
+          <Box class={photoPreviewClass}>
+            <Show when={previewUrl()} fallback={<span>No photo yet</span>}>
+              {(url) => <img src={url()} alt="Selected stuffed animal preview" />}
+            </Show>
+          </Box>
+        </Box>
         <Box>
           <label class={labelClass} for="new-animal-name">Name</label>
           <Input
@@ -307,15 +337,13 @@ function UploadDialog(props: {
           <label class={labelClass} for="new-animal-type">Type</label>
           <Input
             id="new-animal-type"
-            list="new-animal-types"
             value={props.draft.type}
             onInput={(event) => props.onDraftChange("type", event.currentTarget.value)}
           />
-          <datalist id="new-animal-types">
-            <For each={props.customTypes}>
-              {(type) => <option value={type} />}
-            </For>
-          </datalist>
+          <AnimalTypeQuickPicks
+            value={props.draft.type}
+            onChange={(value) => props.onDraftChange("type", value)}
+          />
         </Box>
         <Box>
           <label class={labelClass} for="new-animal-notes">Notes</label>
@@ -330,6 +358,36 @@ function UploadDialog(props: {
     </SimpleDialog>
   );
 }
+
+function AnimalTypeQuickPicks(props: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const normalizedValue = () => normalizeAnimalType(props.value);
+
+  return (
+    <Box class={typeQuickPickRowClass} aria-label="Common animal types">
+      <For each={commonAnimalTypes}>
+        {(type) => {
+          const active = () => normalizedValue() === normalizeAnimalType(type);
+          return (
+            <Button
+              size="sm"
+              variant={active() ? "solid" : "outline"}
+              colorPalette={active() ? "orange" : "gray"}
+              aria-pressed={active()}
+              onClick={() => props.onChange(type)}
+            >
+              {type}
+            </Button>
+          );
+        }}
+      </For>
+    </Box>
+  );
+}
+
+const normalizeAnimalType = (value: string) => value.trim().toLowerCase();
 
 const fetchSession = async () =>
   typeof window === "undefined"
@@ -354,71 +412,3 @@ const zooAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("stuffed_zoo_pass");
   return token ? { "x-stuffed-zoo-pass": token } : {};
 };
-
-const appTitleClass = css({
-  fontSize: { base: "2xl", md: "3xl" },
-  fontWeight: "extrabold",
-  color: "fg.default",
-});
-
-const passcodeShellClass = css({
-  minH: "dvh",
-  display: "grid",
-  placeItems: "center",
-  p: "4",
-});
-
-const passcodeBoxClass = css({
-  w: "full",
-  maxW: "420px",
-  p: "6",
-  borderRadius: "2xl",
-  bg: "bg.default",
-  borderWidth: "1px",
-  borderColor: "border",
-  boxShadow: "xl",
-});
-
-const errorClass = css({
-  color: "red.default",
-  fontWeight: "semibold",
-});
-
-const photoPickerClass = css({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "3",
-  minH: "96px",
-  borderRadius: "xl",
-  borderWidth: "2px",
-  borderStyle: "dashed",
-  borderColor: "orange.subtle.border",
-  bg: "orange.subtle.bg",
-  color: "orange.subtle.fg",
-  fontWeight: "bold",
-  cursor: "pointer",
-  "& input": {
-    srOnly: true,
-  },
-});
-
-const labelClass = css({
-  display: "block",
-  mb: "1.5",
-  fontWeight: "bold",
-});
-
-const deletePromptClass = css({
-  position: "fixed",
-  left: "50%",
-  bottom: "5",
-  transform: "translateX(-50%)",
-  px: "4",
-  py: "2",
-  borderRadius: "full",
-  bg: "red.default",
-  color: "white",
-  fontWeight: "bold",
-  boxShadow: "lg",
-});

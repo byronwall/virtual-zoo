@@ -51,10 +51,14 @@ const fileExists = async (filePath: string) => {
   }
 };
 
+export const zooImageExists = (relativePath: string) =>
+  fileExists(getZooImagePath(relativePath));
+
 export const ensureZooDirs = async () => {
   await Promise.all([
     mkdir(path.join(getZooDataDir(), "images", "original"), { recursive: true }),
     mkdir(path.join(getZooDataDir(), "images", "display"), { recursive: true }),
+    mkdir(path.join(getZooDataDir(), "images", "thumbnails"), { recursive: true }),
     mkdir(path.join(getZooDataDir(), "images", "processed"), { recursive: true }),
   ]);
 };
@@ -92,6 +96,25 @@ const withWriteLock = async <T>(operation: (store: ZooStore) => Promise<T>) => {
 };
 
 export const getZooSnapshot = async () => readStore();
+
+export const getBackgroundRemovalRetryCandidates = async () => {
+  const store = await readStore();
+  return store.animals
+    .filter(
+      (animal) =>
+        !animal.image.backgroundRemoved &&
+        (animal.image.backgroundRemovalStatus === "pending" ||
+          animal.image.backgroundRemovalStatus === "failed"),
+    )
+    .map((animal) => ({
+      animalId: animal.id,
+      displayPath: animal.image.displayPath,
+      processedPath:
+        animal.image.processedPath ??
+        `images/processed/${path.basename(animal.image.displayPath, path.extname(animal.image.displayPath))}.png`,
+      previousStatus: animal.image.backgroundRemovalStatus,
+    }));
+};
 
 export const addAnimal = async (input: {
   name: string;
@@ -182,6 +205,7 @@ export const deleteAnimal = async (id: string) =>
       [
         animal.image.originalPath,
         animal.image.displayPath,
+        getThumbnailPath(animal.image.displayPath),
         animal.image.processedPath,
       ]
         .filter((imagePath): imagePath is string => !!imagePath)
@@ -201,6 +225,16 @@ export const markBackgroundRemovalCompleted = async (id: string, processedPath: 
     return animal;
   });
 
+export const markBackgroundRemovalPending = async (id: string) =>
+  withWriteLock(async (store) => {
+    const animal = findAnimal(store, id);
+    animal.image.backgroundRemoved = false;
+    animal.image.backgroundRemovalStatus = "pending";
+    delete animal.image.backgroundRemovalError;
+    animal.updatedAt = nowIso();
+    return animal;
+  });
+
 export const markBackgroundRemovalFailed = async (id: string, error: string) =>
   withWriteLock(async (store) => {
     const animal = findAnimal(store, id);
@@ -215,6 +249,9 @@ const findAnimal = (store: ZooStore, id: string) => {
   if (!animal) throw new Error("Animal not found.");
   return animal;
 };
+
+export const getThumbnailPath = (displayPath: string) =>
+  `images/thumbnails/${path.basename(displayPath, path.extname(displayPath))}.webp`;
 
 const yesterdayDate = () => {
   const date = new Date();

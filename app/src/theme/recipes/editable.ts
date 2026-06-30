@@ -28,6 +28,7 @@ export const editable = defineSlotRecipe({
     },
     input: {
       borderRadius: "l2",
+      fontSize: "max(1rem, 16px)",
 
       focusRingWidth: "2px",
       focusRing: "inside",
@@ -51,19 +52,19 @@ export const editable = defineSlotRecipe({
     size: {
       "2xs": {
         preview: { textStyle: "xs", px: "2", py: "0.5" },
-        input: { textStyle: "xs", px: "2", py: "0.5" },
+        input: { textStyle: "md", px: "2", py: "0.5" },
       },
       xs: {
         preview: { textStyle: "sm", px: "2.5", py: "1.5" },
-        input: { textStyle: "sm", px: "2.5", py: "1.5" },
+        input: { textStyle: "md", px: "2.5", py: "1.5" },
       },
       sm: {
         preview: { textStyle: "sm", px: "3", py: "2" },
-        input: { textStyle: "sm", px: "3", py: "2" },
+        input: { textStyle: "md", px: "3", py: "2" },
       },
       md: {
         preview: { textStyle: "sm", px: "3.5", py: "2.5" },
-        input: { textStyle: "sm", px: "3.5", py: "2.5" },
+        input: { textStyle: "md", px: "3.5", py: "2.5" },
       },
       lg: {
         preview: { textStyle: "md", px: "4", py: "2.5" },

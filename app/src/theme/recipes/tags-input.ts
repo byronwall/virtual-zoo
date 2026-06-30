@@ -53,6 +53,7 @@ export const tagsInput = defineSlotRecipe({
       },
     },
     input: {
+      fontSize: "max(1rem, 16px)",
       px: "calc(var(--tags-input-item-px) / 1.25)",
       height: "var(--tags-input-item-height)",
 
@@ -64,6 +65,7 @@ export const tagsInput = defineSlotRecipe({
       },
     },
     itemInput: {
+      fontSize: "max(1rem, 16px)",
       px: "var(--tags-input-item-px)",
       height: "var(--tags-input-item-height)",
       lineHeight: "1",

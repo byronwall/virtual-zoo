@@ -5,6 +5,7 @@ export const textarea = defineRecipe({
   base: {
     appearance: "none",
     borderRadius: "l2",
+    fontSize: "max(1rem, 16px)",
     minWidth: "0",
     outline: "0",
     position: "relative",
@@ -72,8 +73,8 @@ export const textarea = defineRecipe({
       },
     },
     size: {
-      xs: { textStyle: "sm", px: "2", py: "5px", scrollPaddingBottom: "5px" },
-      sm: { textStyle: "sm", px: "2.5", py: "7px", scrollPaddingBottom: "7px" },
+      xs: { textStyle: "md", px: "2", py: "7px", scrollPaddingBottom: "7px" },
+      sm: { textStyle: "md", px: "2.5", py: "7px", scrollPaddingBottom: "7px" },
       md: { textStyle: "md", px: "3", py: "7px", scrollPaddingBottom: "7px" },
       lg: { textStyle: "md", px: "3.5", py: "9px", scrollPaddingBottom: "9px" },
       xl: { textStyle: "lg", px: "4", py: "9px", scrollPaddingBottom: "9px" },

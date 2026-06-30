@@ -1,7 +1,9 @@
 setuptools==59.8.0
 wheel==0.43.0
 fastapi==0.115.6
-numba==0.53.1
+numpy==1.26.4
+numba==0.60.0
+llvmlite==0.43.0
 onnxruntime==1.19.2
 pillow==10.4.0
 pillow-heif==0.18.0

@@ -2,9 +2,19 @@ import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
 import { writeFile } from "node:fs/promises";
 import type { APIEvent } from "@solidjs/start/server";
-import { createDisplayImage, queueBackgroundRemoval } from "~/lib/stuffed-zoo/image-processing";
+import {
+  createDisplayImage,
+  createThumbnailImage,
+  queueBackgroundRemoval,
+} from "~/lib/stuffed-zoo/image-processing";
 import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
-import { addAnimal, ensureZooDirs, getZooImagePath } from "~/lib/stuffed-zoo/store";
+import {
+  addAnimal,
+  ensureZooDirs,
+  getThumbnailPath,
+  getZooImagePath,
+  zooImageExists,
+} from "~/lib/stuffed-zoo/store";
 
 const cleanType = (value: FormDataEntryValue | null) =>
   String(value ?? "").trim().toLowerCase();
@@ -20,14 +30,22 @@ const extensionForUpload = (file: File) => {
   return ".jpg";
 };
 
-const toClientAnimal = (animal: Awaited<ReturnType<typeof addAnimal>>) => ({
-  ...animal,
-  image: {
-    ...animal.image,
-    displayUrl: `/api/zoo/images/${animal.image.displayPath}`,
-    stickerUrl: `/api/zoo/images/${animal.image.processedPath ?? animal.image.displayPath}`,
-  },
-});
+const toClientAnimal = async (animal: Awaited<ReturnType<typeof addAnimal>>) => {
+  const thumbnailPath = getThumbnailPath(animal.image.displayPath);
+  const stickerPath = animal.image.processedPath ?? animal.image.displayPath;
+  const thumbnailUrl = `/api/zoo/images/${
+    (await zooImageExists(thumbnailPath)) ? thumbnailPath : stickerPath
+  }`;
+  return {
+    ...animal,
+    image: {
+      ...animal.image,
+      displayUrl: `/api/zoo/images/${animal.image.displayPath}`,
+      thumbnailUrl,
+      stickerUrl: `/api/zoo/images/${stickerPath}`,
+    },
+  };
+};
 
 export async function POST(event: APIEvent) {
   requireZooPasscode(event);
@@ -69,6 +87,14 @@ export async function POST(event: APIEvent) {
   }
 
   await writeFile(getZooImagePath(displayPath), displayBytes);
+  const thumbnailBytes = await createThumbnailImage({
+    bytes: displayBytes,
+    filename: displayPath,
+  });
+  if (thumbnailBytes) {
+    await writeFile(getZooImagePath(getThumbnailPath(displayPath)), thumbnailBytes);
+  }
+
   const animal = await addAnimal({
     name,
     type,
@@ -79,5 +105,5 @@ export async function POST(event: APIEvent) {
   });
   queueBackgroundRemoval({ animalId: animal.id, displayPath, processedPath });
 
-  return Response.json({ animal: toClientAnimal(animal) }, { status: 201 });
+  return Response.json({ animal: await toClientAnimal(animal) }, { status: 201 });
 }
