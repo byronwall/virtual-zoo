@@ -33,15 +33,18 @@ const extensionForUpload = (file: File) => {
 const toClientAnimal = async (animal: Awaited<ReturnType<typeof addAnimal>>) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
   const stickerPath = animal.image.processedPath ?? animal.image.displayPath;
-  const thumbnailUrl = `/api/zoo/images/${
-    (await zooImageExists(thumbnailPath)) ? thumbnailPath : stickerPath
-  }`;
+  const thumbnailPathOrSticker =
+    animal.image.backgroundRemoved && animal.image.processedPath
+      ? animal.image.processedPath
+      : (await zooImageExists(thumbnailPath))
+        ? thumbnailPath
+        : stickerPath;
   return {
     ...animal,
     image: {
       ...animal.image,
       displayUrl: `/api/zoo/images/${animal.image.displayPath}`,
-      thumbnailUrl,
+      thumbnailUrl: `/api/zoo/images/${thumbnailPathOrSticker}`,
       stickerUrl: `/api/zoo/images/${stickerPath}`,
     },
   };

@@ -1,4 +1,5 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
+import { createStore } from "solid-js/store";
 import { css } from "styled-system/css";
 import { Box } from "styled-system/jsx";
 import type { ClientAnimal } from "./types";
@@ -49,7 +50,8 @@ export function ZooCanvas(props: ZooCanvasProps) {
   const activePointers = new Map<number, Point>();
   let gesture: GestureState | null = null;
   const [drag, setDrag] = createSignal<DragState | null>(null);
-  const [positions, setPositions] = createSignal<Record<string, { x: number; y: number }>>({});
+  const [positions, setPositions] = createStore<Record<string, Point>>({});
+  const [zIndexes, setZIndexes] = createStore<Record<string, number>>({});
   const [viewport, setViewport] = createSignal(DEFAULT_VIEWPORT);
 
   const sortedAnimals = createMemo(() =>
@@ -61,7 +63,8 @@ export function ZooCanvas(props: ZooCanvasProps) {
     }),
   );
 
-  const positionFor = (animal: ClientAnimal) => positions()[animal.id] ?? animal.canvas;
+  const positionFor = (animal: ClientAnimal): Point => positions[animal.id] ?? animal.canvas;
+  const zIndexFor = (animal: ClientAnimal) => zIndexes[animal.id] ?? animal.canvas.zIndex;
 
   const trackPointer = (event: PointerEvent) => {
     const rect = canvasRef?.getBoundingClientRect();
@@ -82,10 +85,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
     if (!first || !second) return false;
     const currentDrag = drag();
     if (currentDrag) {
-      setPositions((previous) => ({
-        ...previous,
-        [currentDrag.id]: { x: currentDrag.originX, y: currentDrag.originY },
-      }));
+      setPositions(currentDrag.id, { x: currentDrag.originX, y: currentDrag.originY });
     }
     setDrag(null);
     gesture = {
@@ -164,9 +164,12 @@ export function ZooCanvas(props: ZooCanvasProps) {
     }
     props.onSelectAnimal(animal.id);
     const position = positionFor(animal);
-    const zIndex =
-      props.animals.reduce((highest, candidate) => Math.max(highest, candidate.canvas.zIndex), 0) +
-      1;
+    let highestZIndex = 0;
+    for (const candidate of props.animals) {
+      highestZIndex = Math.max(highestZIndex, zIndexes[candidate.id] ?? candidate.canvas.zIndex);
+    }
+    const zIndex = highestZIndex + 1;
+    setZIndexes(animal.id, zIndex);
     setDrag({
       id: animal.id,
       pointerId: event.pointerId,
@@ -189,22 +192,20 @@ export function ZooCanvas(props: ZooCanvasProps) {
     const current = drag();
     if (!current || current.pointerId !== event.pointerId || !canvasRef) return;
     const rect = canvasRef.getBoundingClientRect();
-    const nextX = clamp(
+    const nextX = roundPosition(
       current.originX + ((event.clientX - current.startX) / (rect.width * viewport().scale)) * 100,
     );
-    const nextY = clamp(
+    const nextY = roundPosition(
       current.originY + ((event.clientY - current.startY) / (rect.height * viewport().scale)) * 100,
     );
-    setPositions((previous) => ({
-      ...previous,
-      [current.id]: { x: nextX, y: nextY },
-    }));
+    setPositions(current.id, { x: nextX, y: nextY });
+    setZIndexes(current.id, current.zIndex);
   };
 
   const handleAnimalPointerUp = (event: PointerEvent) => {
     const current = drag();
     if (current && current.pointerId === event.pointerId) {
-      const position = positions()[current.id] ?? { x: current.originX, y: current.originY };
+      const position = positions[current.id] ?? { x: current.originX, y: current.originY };
       props.onMoveAnimal(current.id, position.x, position.y, current.zIndex);
     }
     setDrag(null);
@@ -287,7 +288,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
                     left: `${position().x}%`,
                     top: `${position().y}%`,
                     transform: `translate(-50%, -50%) rotate(${animal.canvas.rotation}deg) scale(${animal.canvas.scale})`,
-                    "z-index": String(selected() ? 999 : animal.canvas.zIndex),
+                    "z-index": String(selected() ? 999 : zIndexFor(animal)),
                   }}
                 >
                   <AsyncThumbnailImage
@@ -309,7 +310,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
   );
 }
 
-const clamp = (value: number) => Math.max(6, Math.min(94, Math.round(value * 10) / 10));
+const roundPosition = (value: number) => Math.round(value * 10) / 10;
 const clampScale = (value: number) => Math.max(0.42, Math.min(2.4, value));
 const distance = (first: Point, second: Point) =>
   Math.hypot(second.x - first.x, second.y - first.y);

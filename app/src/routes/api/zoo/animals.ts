@@ -22,13 +22,18 @@ const toClientAnimal = async (
 ) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
   const stickerPath = animal.image.processedPath ?? animal.image.displayPath;
-  const thumbnailUrl = imageUrl((await zooImageExists(thumbnailPath)) ? thumbnailPath : stickerPath);
+  const thumbnailPathOrSticker =
+    animal.image.backgroundRemoved && animal.image.processedPath
+      ? animal.image.processedPath
+      : (await zooImageExists(thumbnailPath))
+        ? thumbnailPath
+        : stickerPath;
   return {
     ...animal,
     image: {
       ...animal.image,
       displayUrl: imageUrl(animal.image.displayPath),
-      thumbnailUrl,
+      thumbnailUrl: imageUrl(thumbnailPathOrSticker),
       stickerUrl: imageUrl(stickerPath),
     },
   };

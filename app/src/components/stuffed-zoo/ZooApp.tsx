@@ -140,7 +140,6 @@ export function ZooApp() {
       headers: { ...zooAuthHeaders(), "content-type": "application/json" },
       body: JSON.stringify({ intent: "position", id, x, y, zIndex }),
     });
-    await refetch();
   };
 
   const handleDelete = async () => {

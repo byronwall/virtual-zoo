@@ -137,6 +137,13 @@ const removeBackground = async (input: {
     path.basename(input.displayPath),
   );
   await writeFile(getZooImagePath(input.processedPath), output);
+  const thumbnailBytes = await createThumbnailImage({
+    bytes: output,
+    filename: path.basename(input.processedPath),
+  });
+  if (thumbnailBytes) {
+    await writeFile(getZooImagePath(getThumbnailPath(input.displayPath)), thumbnailBytes);
+  }
   await markBackgroundRemovalCompleted(input.animalId, input.processedPath);
 };
 

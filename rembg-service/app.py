@@ -14,6 +14,13 @@ app = FastAPI(title="Stuffed Zoo Background Helper")
 rembg_remove = None
 rembg_import_error = None
 
+REMBG_OPTIONS = {
+    "alpha_matting": True,
+    "alpha_matting_foreground_threshold": 225,
+    "alpha_matting_background_threshold": 15,
+    "alpha_matting_erode_size": 6,
+}
+
 
 def package_version(package: str) -> str:
     try:
@@ -114,7 +121,9 @@ async def thumbnail(file: UploadFile) -> Response:
         image = Image.open(BytesIO(content))
         image = ImageOps.exif_transpose(image)
         image.thumbnail((192, 192), Image.Resampling.LANCZOS)
-        if image.mode not in ("RGB", "L"):
+        if image.mode in ("RGBA", "LA"):
+            image = image.convert("RGBA")
+        elif image.mode not in ("RGB", "L"):
             image = image.convert("RGB")
         output = BytesIO()
         image.save(output, format="WEBP", quality=58, method=6)
@@ -132,7 +141,7 @@ async def remove_background(file: UploadFile) -> Response:
     )
     try:
         remove = get_rembg_remove()
-        return Response(remove(content), media_type="image/png")
+        return Response(remove(content, **REMBG_OPTIONS), media_type="image/png")
     except Exception as exc:
         logger.exception(
             "background removal failed",
