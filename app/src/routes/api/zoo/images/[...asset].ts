@@ -14,7 +14,7 @@ export async function GET(event: APIEvent) {
   try {
     return new Response(await readFile(getZooImagePath(normalized)), {
       headers: {
-        "content-type": "image/webp",
+        "content-type": getImageContentType(normalized),
         "cache-control": "private, max-age=86400",
       },
     });
@@ -26,6 +26,22 @@ export async function GET(event: APIEvent) {
 const isClientImagePath = (normalized: string) =>
   !normalized.startsWith("..") &&
   !normalized.startsWith("/") &&
-  extname(normalized).toLowerCase() === ".webp" &&
+  isClientImageExtension(normalized) &&
   (normalized.startsWith("images/unprocessed/") ||
-    normalized.startsWith("images/processed/"));
+    normalized.startsWith("images/processed/") ||
+    normalized.startsWith("images/display/"));
+
+const isClientImageExtension = (normalized: string) =>
+  [".webp", ".png", ".jpg", ".jpeg"].includes(extname(normalized).toLowerCase());
+
+const getImageContentType = (normalized: string) => {
+  switch (extname(normalized).toLowerCase()) {
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    default:
+      return "image/webp";
+  }
+};

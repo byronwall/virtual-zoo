@@ -66,21 +66,29 @@ export const ensureSnapshotUnprocessedImages = async (
     const nextUnprocessedPath = getUnprocessedPath(
       path.basename(animal.image.unprocessedPath, path.extname(animal.image.unprocessedPath)),
     );
-    const originalBytes = await readFile(getZooImagePath(animal.image.originalPath));
-    const unprocessedBytes = await createUnprocessedImage({
-      bytes: originalBytes,
-      filename: path.basename(animal.image.originalPath),
-    });
-    await writeFile(getZooImagePath(nextUnprocessedPath), unprocessedBytes);
-    const migratedAnimal = await replaceUnprocessedImage({
-      id: animal.id,
-      unprocessedPath: nextUnprocessedPath,
-    });
-    queueBackgroundRemoval({
-      animalId: migratedAnimal.id,
-      unprocessedPath: migratedAnimal.image.unprocessedPath,
-      processedPath: getProcessedPath(migratedAnimal.image.unprocessedPath),
-    });
+    try {
+      const originalBytes = await readFile(getZooImagePath(animal.image.originalPath));
+      const unprocessedBytes = await createUnprocessedImage({
+        bytes: originalBytes,
+        filename: path.basename(animal.image.originalPath),
+      });
+      await writeFile(getZooImagePath(nextUnprocessedPath), unprocessedBytes);
+      const migratedAnimal = await replaceUnprocessedImage({
+        id: animal.id,
+        unprocessedPath: nextUnprocessedPath,
+      });
+      queueBackgroundRemoval({
+        animalId: migratedAnimal.id,
+        unprocessedPath: migratedAnimal.image.unprocessedPath,
+        processedPath: getProcessedPath(migratedAnimal.image.unprocessedPath),
+      });
+    } catch (error) {
+      console.error("Stuffed zoo unprocessed image migration failed", {
+        animalId: animal.id,
+        originalPath: animal.image.originalPath,
+        error,
+      });
+    }
   }
 };
 

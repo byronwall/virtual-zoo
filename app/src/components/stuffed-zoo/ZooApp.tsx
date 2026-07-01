@@ -313,20 +313,34 @@ function PasscodeView(props: {
 const fetchSession = async () =>
   typeof window === "undefined"
     ? { authenticated: false }
-    : ((await fetch("/api/zoo/session", {
+    : readJsonResponse<{ authenticated: boolean }>(await fetch("/api/zoo/session", {
         credentials: "include",
         headers: zooAuthHeaders(),
-      }).then((response) => response.json())) as {
-        authenticated: boolean;
-      });
+      }), "GET /api/zoo/session");
 
 const fetchZooSnapshot = async () =>
   typeof window === "undefined"
     ? null
-    : ((await fetch("/api/zoo/animals", {
+    : readJsonResponse<ZooSnapshot>(await fetch("/api/zoo/animals", {
         credentials: "include",
         headers: zooAuthHeaders(),
-      }).then((response) => response.json())) as ZooSnapshot);
+      }), "GET /api/zoo/animals");
+
+const readJsonResponse = async <T,>(response: Response, label: string) => {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!response.ok) {
+    const responseText = await response.text().catch(() => "");
+    const details = responseText.trim().slice(0, 240) || response.statusText;
+    throw new Error(`${label} failed with ${response.status}: ${details}`);
+  }
+  if (!contentType.includes("application/json")) {
+    const responseText = await response.text().catch(() => "");
+    throw new Error(
+      `${label} returned ${contentType || "unknown content type"}: ${responseText.trim().slice(0, 240)}`,
+    );
+  }
+  return (await response.json()) as T;
+};
 
 const zooAuthHeaders = (): Record<string, string> => {
   if (typeof window === "undefined") return {};
