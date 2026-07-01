@@ -96,6 +96,8 @@ export function ZooCanvas(props: ZooCanvasProps) {
 
   const positionFor = (animal: ClientAnimal): Point => positions[animal.id] ?? animal.canvas;
   const zIndexFor = (animal: ClientAnimal) => zIndexes[animal.id] ?? animal.canvas.zIndex;
+  const imageSourceFor = (animal: ClientAnimal) =>
+    animal.image.stickerUrl || animal.image.thumbnailUrl;
 
   onMount(() => {
     mainContext = mainCanvasRef?.getContext("2d", { alpha: false }) ?? null;
@@ -124,7 +126,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
     const sources = orderedAnimals()
       .slice()
       .reverse()
-      .map((animal) => animal.image.thumbnailUrl);
+      .map(imageSourceFor);
     if (typeof window === "undefined") return;
     let cancelled = false;
     const timers: number[] = [];
@@ -214,7 +216,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
 
   const drawAnimal = (context: CanvasRenderingContext2D, animal: ClientAnimal, size: CanvasSize) => {
     const bounds = animalBounds(animal, size);
-    const record = imageCache.get(animal.image.thumbnailUrl);
+    const record = imageCache.get(imageSourceFor(animal));
     context.save();
     context.translate(bounds.center.x, bounds.center.y);
     context.rotate(degreesToRadians(animal.canvas.rotation));

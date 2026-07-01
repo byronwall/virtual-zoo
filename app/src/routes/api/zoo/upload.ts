@@ -23,9 +23,13 @@ const cleanText = (value: FormDataEntryValue | null) => String(value ?? "").trim
 
 const imageVersion = (animal: Awaited<ReturnType<typeof addAnimal>>) =>
   encodeURIComponent(
-    animal.image.backgroundRemovalVersion ??
-      animal.image.backgroundRemovalStatus ??
+    [
+      animal.image.backgroundRemovalVersion,
+      animal.image.backgroundRemovalStatus,
       animal.updatedAt,
+    ]
+      .filter(Boolean)
+      .join("-"),
   );
 
 const imageUrl = (path: string, animal: Awaited<ReturnType<typeof addAnimal>>) =>
@@ -42,10 +46,14 @@ const extensionForUpload = (file: File) => {
 
 const toClientAnimal = async (animal: Awaited<ReturnType<typeof addAnimal>>) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
-  const stickerPath = animal.image.processedPath ?? animal.image.displayPath;
-  const thumbnailPathOrSticker =
-    animal.image.backgroundRemoved && animal.image.processedPath
+  const processedPath =
+    animal.image.processedPath && (await zooImageExists(animal.image.processedPath))
       ? animal.image.processedPath
+      : null;
+  const stickerPath = processedPath ?? animal.image.displayPath;
+  const thumbnailPathOrSticker =
+    processedPath
+      ? processedPath
       : (await zooImageExists(thumbnailPath))
         ? thumbnailPath
         : stickerPath;

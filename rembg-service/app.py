@@ -25,6 +25,8 @@ MASK_THRESHOLD = 1
 MASK_GROW_PIXELS = 50
 MASK_SHRINK_PIXELS = 26
 MASK_FEATHER_PIXELS = 2.0
+FRAME_ALPHA_THRESHOLD = 8
+FRAME_FILL_RATIO = 0.86
 
 
 def package_version(package: str) -> str:
@@ -83,6 +85,40 @@ def postprocess_plush_mask(mask: Image.Image) -> Image.Image:
     return Image.fromarray(mask_array, "L")
 
 
+def frame_cutout(image: Image.Image) -> Image.Image:
+    image = image.convert("RGBA")
+    alpha = image.getchannel("A")
+    alpha_array = np.array(alpha)
+    bbox_mask = Image.fromarray(
+        np.where(alpha_array >= FRAME_ALPHA_THRESHOLD, 255, 0).astype(np.uint8),
+        "L",
+    )
+    bbox = bbox_mask.getbbox()
+    if bbox is None:
+        return image
+
+    cropped = image.crop(bbox)
+    crop_width, crop_height = cropped.size
+    frame_size = max(image.size)
+    if crop_width <= 0 or crop_height <= 0 or frame_size <= 0:
+        return image
+
+    target_size = max(1, round(frame_size * FRAME_FILL_RATIO))
+    scale = min(target_size / crop_width, target_size / crop_height)
+    scaled_size = (
+        max(1, round(crop_width * scale)),
+        max(1, round(crop_height * scale)),
+    )
+    framed = Image.new("RGBA", (frame_size, frame_size), (0, 0, 0, 0))
+    resized = cropped.resize(scaled_size, Image.Resampling.LANCZOS)
+    offset = (
+        (frame_size - scaled_size[0]) // 2,
+        (frame_size - scaled_size[1]) // 2,
+    )
+    framed.alpha_composite(resized, dest=offset)
+    return framed
+
+
 def remove_background_bytes(content: bytes) -> bytes:
     source = Image.open(BytesIO(content))
     source = ImageOps.exif_transpose(source).convert("RGBA")
@@ -92,6 +128,7 @@ def remove_background_bytes(content: bytes) -> bytes:
     if mask.size != source.size:
         mask = mask.resize(source.size, Image.Resampling.LANCZOS)
     source.putalpha(postprocess_plush_mask(mask))
+    source = frame_cutout(source)
     output = BytesIO()
     source.save(output, format="PNG", compress_level=4)
     return output.getvalue()

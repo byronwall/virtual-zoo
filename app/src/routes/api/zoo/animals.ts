@@ -19,9 +19,13 @@ const imageVersion = (
   animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
 ) =>
   encodeURIComponent(
-    animal.image.backgroundRemovalVersion ??
-      animal.image.backgroundRemovalStatus ??
+    [
+      animal.image.backgroundRemovalVersion,
+      animal.image.backgroundRemovalStatus,
       animal.updatedAt,
+    ]
+      .filter(Boolean)
+      .join("-"),
   );
 
 const imageUrl = (
@@ -33,10 +37,14 @@ const toClientAnimal = async (
   animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
 ) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
-  const stickerPath = animal.image.processedPath ?? animal.image.displayPath;
-  const thumbnailPathOrSticker =
-    animal.image.backgroundRemoved && animal.image.processedPath
+  const processedPath =
+    animal.image.processedPath && (await zooImageExists(animal.image.processedPath))
       ? animal.image.processedPath
+      : null;
+  const stickerPath = processedPath ?? animal.image.displayPath;
+  const thumbnailPathOrSticker =
+    processedPath
+      ? processedPath
       : (await zooImageExists(thumbnailPath))
         ? thumbnailPath
         : stickerPath;

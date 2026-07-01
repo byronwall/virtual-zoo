@@ -13,7 +13,8 @@ import {
 const defaultServiceUrl = "http://rembg:7000";
 let recoveryStarted = false;
 
-const backgroundRemovalVersion = "rembg-u2net-mask-threshold1-grow50-shrink26-feather2";
+const backgroundRemovalVersion =
+  "rembg-u2net-mask-threshold1-grow50-shrink26-feather2-frame86";
 
 const getServiceUrl = () =>
   process.env.REMBG_SERVICE_URL?.replace(/\/+$/, "") || defaultServiceUrl;
