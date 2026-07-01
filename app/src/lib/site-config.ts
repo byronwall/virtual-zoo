@@ -53,6 +53,9 @@ const trimEnv = (value: string | undefined) => {
   return trimmed ? trimmed : undefined;
 };
 
+const parseTextEnv = (value: string | undefined, fallback: string) =>
+  trimEnv(value)?.replace(/\\(['"])/g, "$1") ?? fallback;
+
 const parsePrimaryColor = (value: string | undefined): SitePrimaryColor => {
   const normalized = trimEnv(value)?.toLowerCase();
   return normalized && primaryColorSet.has(normalized)
@@ -68,8 +71,8 @@ const parseIconVariant = (value: string | undefined): SiteIconVariant => {
 };
 
 export const resolveSiteConfig = (env: SiteEnv = {}): SiteConfig => {
-  const title = trimEnv(env.SITE_TITLE) ?? DEFAULT_SITE_TITLE;
-  const shortTitle = trimEnv(env.SITE_SHORT_TITLE) ?? DEFAULT_SITE_SHORT_TITLE;
+  const title = parseTextEnv(env.SITE_TITLE, DEFAULT_SITE_TITLE);
+  const shortTitle = parseTextEnv(env.SITE_SHORT_TITLE, DEFAULT_SITE_SHORT_TITLE);
   const primaryColor = parsePrimaryColor(env.SITE_PRIMARY_COLOR);
   const iconVariant = parseIconVariant(env.SITE_ICON_VARIANT);
 

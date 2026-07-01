@@ -4,7 +4,6 @@ import { css } from "styled-system/css";
 import { Box, HStack, VStack } from "styled-system/jsx";
 import { Button, CloseButton, IconButton, Input, Text, Textarea } from "~/components/ui";
 import type { ClientAnimal } from "./types";
-import { AsyncThumbnailImage } from "./AsyncThumbnailImage";
 
 type DetailPaneProps = {
   animals: ClientAnimal[];
@@ -56,7 +55,7 @@ export function DetailPane(props: DetailPaneProps) {
             />
             <Box class={stickerPreviewClass}>
               <img
-                src={animal().image.stickerUrl}
+                src={animal().image.imageUrl}
                 alt={animal().name}
                 loading="eager"
                 decoding="async"
@@ -166,10 +165,11 @@ function SleepCalendar(props: {
               <Box class={sleepPileClass}>
                 <For each={sleepers().slice(0, 4)}>
                   {(animal, index) => (
-                    <AsyncThumbnailImage
-                      src={animal.image.thumbnailUrl}
-                      fallbackSrc={animal.image.stickerUrl}
+                    <img
+                      src={animal.image.imageUrl}
                       alt={animal.name}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         transform: `translateX(${index() * -8}px) rotate(${index() % 2 === 0 ? -6 : 6}deg)`,
                         "z-index": String(index() + 1),

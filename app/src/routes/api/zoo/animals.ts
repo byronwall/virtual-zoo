@@ -1,18 +1,15 @@
 import type { APIEvent } from "@solidjs/start/server";
 import {
   ensureBackgroundRemovalRecoveryStarted,
-  ensureSnapshotThumbnails,
+  ensureSnapshotUnprocessedImages,
 } from "~/lib/stuffed-zoo/image-processing";
 import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
 import {
   deleteAnimal,
-  getProcessedPath,
-  getThumbnailPath,
   getZooSnapshot,
   logSleepoverLastNight,
   updateAnimal,
   updateAnimalPosition,
-  zooImageExists,
 } from "~/lib/stuffed-zoo/store";
 import { updateAnimalPositionSchema, updateAnimalSchema } from "~/lib/stuffed-zoo/schema";
 
@@ -33,30 +30,28 @@ const imageUrl = (
   animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
 ) => `/api/zoo/images/${path}?v=${imageVersion(animal)}`;
 
-const toClientAnimal = async (
+const toClientAnimal = (
   animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
 ) => {
-  const thumbnailPath = getThumbnailPath(animal.image.displayPath);
-  const expectedProcessedPath = getProcessedPath(animal.image.displayPath);
-  const processedPath =
-    animal.image.processedPath === expectedProcessedPath &&
-    (await zooImageExists(expectedProcessedPath))
-      ? expectedProcessedPath
-      : null;
-  const stickerPath = processedPath ?? animal.image.displayPath;
-  const thumbnailPathOrSticker =
-    processedPath
-      ? processedPath
-      : (await zooImageExists(thumbnailPath))
-        ? thumbnailPath
-        : stickerPath;
+  const visiblePath =
+    animal.image.backgroundRemoved && animal.image.processedPath
+      ? animal.image.processedPath
+      : animal.image.unprocessedPath;
   return {
-    ...animal,
+    id: animal.id,
+    name: animal.name,
+    type: animal.type,
+    notes: animal.notes,
+    canvas: animal.canvas,
+    sleepLog: animal.sleepLog,
+    createdAt: animal.createdAt,
+    updatedAt: animal.updatedAt,
     image: {
-      ...animal.image,
-      displayUrl: imageUrl(animal.image.displayPath, animal),
-      thumbnailUrl: imageUrl(thumbnailPathOrSticker, animal),
-      stickerUrl: imageUrl(stickerPath, animal),
+      backgroundRemoved: animal.image.backgroundRemoved,
+      backgroundRemovalStatus: animal.image.backgroundRemovalStatus,
+      backgroundRemovalVersion: animal.image.backgroundRemovalVersion,
+      backgroundRemovalError: animal.image.backgroundRemovalError,
+      imageUrl: imageUrl(visiblePath, animal),
     },
   };
 };
@@ -65,10 +60,11 @@ export async function GET(event: APIEvent) {
   requireZooPasscode(event);
   ensureBackgroundRemovalRecoveryStarted();
   const snapshot = await getZooSnapshot();
-  await ensureSnapshotThumbnails(snapshot);
-  const animals = await Promise.all(snapshot.animals.map(toClientAnimal));
+  await ensureSnapshotUnprocessedImages(snapshot);
+  const migratedSnapshot = await getZooSnapshot();
+  const animals = migratedSnapshot.animals.map(toClientAnimal);
   return Response.json({
-    ...snapshot,
+    ...migratedSnapshot,
     animals,
   });
 }
@@ -78,18 +74,18 @@ export async function PATCH(event: APIEvent) {
   const input = (await event.request.json().catch(() => ({}))) as { intent?: string };
   if (input.intent === "position") {
     const animal = await updateAnimalPosition(updateAnimalPositionSchema.parse(input));
-    return Response.json({ animal: await toClientAnimal(animal) });
+    return Response.json({ animal: toClientAnimal(animal) });
   }
   if (input.intent === "sleepover") {
     const id = String((input as { id?: unknown }).id ?? "");
     const result = await logSleepoverLastNight(id);
     return Response.json({
       ...result,
-      animal: await toClientAnimal(result.animal),
+      animal: toClientAnimal(result.animal),
     });
   }
   const animal = await updateAnimal(updateAnimalSchema.parse(input));
-  return Response.json({ animal: await toClientAnimal(animal) });
+  return Response.json({ animal: toClientAnimal(animal) });
 }
 
 export async function DELETE(event: APIEvent) {

@@ -12,20 +12,31 @@ export const sleepLogEntrySchema = z.object({
   source: z.literal("sleepover-button"),
 });
 
+const animalImageSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object") return value;
+  const image = value as Record<string, unknown>;
+  if (typeof image.unprocessedPath === "string") return value;
+  if (typeof image.displayPath !== "string") return value;
+  return {
+    ...image,
+    unprocessedPath: image.displayPath,
+  };
+}, z.object({
+  originalPath: z.string().min(1),
+  unprocessedPath: z.string().min(1),
+  processedPath: z.string().optional(),
+  backgroundRemoved: z.boolean(),
+  backgroundRemovalStatus: backgroundRemovalStatusSchema,
+  backgroundRemovalVersion: z.string().optional(),
+  backgroundRemovalError: z.string().optional(),
+}));
+
 export const animalSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   type: z.string().min(1),
   notes: z.string(),
-  image: z.object({
-    originalPath: z.string().min(1),
-    displayPath: z.string().min(1),
-    processedPath: z.string().optional(),
-    backgroundRemoved: z.boolean(),
-    backgroundRemovalStatus: backgroundRemovalStatusSchema,
-    backgroundRemovalVersion: z.string().optional(),
-    backgroundRemovalError: z.string().optional(),
-  }),
+  image: animalImageSchema,
   canvas: z.object({
     x: z.number(),
     y: z.number(),

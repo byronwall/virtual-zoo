@@ -57,8 +57,7 @@ export const zooImageExists = (relativePath: string) =>
 export const ensureZooDirs = async () => {
   await Promise.all([
     mkdir(path.join(getZooDataDir(), "images", "original"), { recursive: true }),
-    mkdir(path.join(getZooDataDir(), "images", "display"), { recursive: true }),
-    mkdir(path.join(getZooDataDir(), "images", "thumbnails"), { recursive: true }),
+    mkdir(path.join(getZooDataDir(), "images", "unprocessed"), { recursive: true }),
     mkdir(path.join(getZooDataDir(), "images", "processed"), { recursive: true }),
   ]);
 };
@@ -114,8 +113,8 @@ export const getBackgroundRemovalRetryCandidates = async (currentVersion: string
     )
     .map((animal) => ({
       animalId: animal.id,
-      displayPath: animal.image.displayPath,
-      processedPath: getProcessedPath(animal.image.displayPath),
+      unprocessedPath: animal.image.unprocessedPath,
+      processedPath: getProcessedPath(animal.image.unprocessedPath),
       previousStatus: animal.image.backgroundRemovalStatus,
       previousVersion: animal.image.backgroundRemovalVersion,
     }));
@@ -126,7 +125,7 @@ export const addAnimal = async (input: {
   type: string;
   notes: string;
   originalPath: string;
-  displayPath: string;
+  unprocessedPath: string;
   backgroundRemovalStatus: Animal["image"]["backgroundRemovalStatus"];
 }) =>
   withWriteLock(async (store) => {
@@ -140,7 +139,7 @@ export const addAnimal = async (input: {
       notes: input.notes,
       image: {
         originalPath: input.originalPath,
-        displayPath: input.displayPath,
+        unprocessedPath: input.unprocessedPath,
         backgroundRemoved: false,
         backgroundRemovalStatus: input.backgroundRemovalStatus,
       },
@@ -209,9 +208,8 @@ export const deleteAnimal = async (id: string) =>
     await Promise.all(
       Array.from(new Set([
         animal.image.originalPath,
-        animal.image.displayPath,
-        getThumbnailPath(animal.image.displayPath),
-        getProcessedPath(animal.image.displayPath),
+        animal.image.unprocessedPath,
+        getProcessedPath(animal.image.unprocessedPath),
         animal.image.processedPath,
       ]))
         .filter((imagePath): imagePath is string => !!imagePath)
@@ -231,6 +229,22 @@ export const markBackgroundRemovalCompleted = async (
     animal.image.backgroundRemoved = true;
     animal.image.backgroundRemovalStatus = "completed";
     animal.image.backgroundRemovalVersion = version;
+    delete animal.image.backgroundRemovalError;
+    animal.updatedAt = nowIso();
+    return animal;
+  });
+
+export const replaceUnprocessedImage = async (input: {
+  id: string;
+  unprocessedPath: string;
+}) =>
+  withWriteLock(async (store) => {
+    const animal = findAnimal(store, input.id);
+    animal.image.unprocessedPath = input.unprocessedPath;
+    animal.image.backgroundRemoved = false;
+    animal.image.backgroundRemovalStatus = "pending";
+    delete animal.image.processedPath;
+    delete animal.image.backgroundRemovalVersion;
     delete animal.image.backgroundRemovalError;
     animal.updatedAt = nowIso();
     return animal;
@@ -261,11 +275,10 @@ const findAnimal = (store: ZooStore, id: string) => {
   return animal;
 };
 
-export const getThumbnailPath = (displayPath: string) =>
-  `images/thumbnails/${path.basename(displayPath, path.extname(displayPath))}.webp`;
+export const getUnprocessedPath = (id: string) => `images/unprocessed/${id}.webp`;
 
-export const getProcessedPath = (displayPath: string) =>
-  `images/processed/${path.basename(displayPath, path.extname(displayPath))}.webp`;
+export const getProcessedPath = (unprocessedPath: string) =>
+  `images/processed/${path.basename(unprocessedPath, path.extname(unprocessedPath))}.webp`;
 
 const yesterdayDate = () => {
   const date = new Date();

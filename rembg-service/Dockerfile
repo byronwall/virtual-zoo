@@ -1,6 +1,8 @@
 FROM python:3.9-slim
 
 ENV PYTHONUNBUFFERED=1
+ENV U2NET_HOME=/models/u2net
+ENV XDG_CACHE_HOME=/models/cache
 WORKDIR /service
 
 RUN apt-get update \

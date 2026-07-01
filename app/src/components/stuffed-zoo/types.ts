@@ -1,10 +1,12 @@
 import type { Animal } from "~/lib/stuffed-zoo/schema";
 
-export type ClientAnimal = Animal & {
-  image: Animal["image"] & {
-    displayUrl: string;
-    thumbnailUrl: string;
-    stickerUrl: string;
+export type ClientAnimal = Omit<Animal, "image"> & {
+  image: {
+    backgroundRemoved: boolean;
+    backgroundRemovalStatus: Animal["image"]["backgroundRemovalStatus"];
+    backgroundRemovalVersion?: string;
+    backgroundRemovalError?: string;
+    imageUrl: string;
   };
 };
 

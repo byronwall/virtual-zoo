@@ -112,7 +112,7 @@ export function ContactSheetDialog(props: ContactSheetDialogProps) {
                 <Box class={contactSheetCardClass}>
                   <Box class={contactSheetCheckClass} aria-hidden="true" />
                   <Box class={contactSheetImageFrameClass}>
-                    <img src={animal.image.stickerUrl} alt={animal.name} loading="eager" />
+                    <img src={animal.image.imageUrl} alt={animal.name} loading="eager" />
                   </Box>
                   <Box class={contactSheetNameClass}>{animal.name}</Box>
                 </Box>

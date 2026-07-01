@@ -3,8 +3,7 @@ import { extname } from "node:path";
 import { writeFile } from "node:fs/promises";
 import type { APIEvent } from "@solidjs/start/server";
 import {
-  createDisplayImage,
-  createThumbnailImage,
+  createUnprocessedImage,
   queueBackgroundRemoval,
 } from "~/lib/stuffed-zoo/image-processing";
 import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
@@ -12,9 +11,8 @@ import {
   addAnimal,
   ensureZooDirs,
   getProcessedPath,
-  getThumbnailPath,
+  getUnprocessedPath,
   getZooImagePath,
-  zooImageExists,
 } from "~/lib/stuffed-zoo/store";
 
 const cleanType = (value: FormDataEntryValue | null) =>
@@ -44,28 +42,26 @@ const extensionForUpload = (file: File) => {
   return ".jpg";
 };
 
-const toClientAnimal = async (animal: Awaited<ReturnType<typeof addAnimal>>) => {
-  const thumbnailPath = getThumbnailPath(animal.image.displayPath);
-  const expectedProcessedPath = getProcessedPath(animal.image.displayPath);
-  const processedPath =
-    animal.image.processedPath === expectedProcessedPath &&
-    (await zooImageExists(expectedProcessedPath))
-      ? expectedProcessedPath
-      : null;
-  const stickerPath = processedPath ?? animal.image.displayPath;
-  const thumbnailPathOrSticker =
-    processedPath
-      ? processedPath
-      : (await zooImageExists(thumbnailPath))
-        ? thumbnailPath
-        : stickerPath;
+const toClientAnimal = (animal: Awaited<ReturnType<typeof addAnimal>>) => {
+  const visiblePath =
+    animal.image.backgroundRemoved && animal.image.processedPath
+      ? animal.image.processedPath
+      : animal.image.unprocessedPath;
   return {
-    ...animal,
+    id: animal.id,
+    name: animal.name,
+    type: animal.type,
+    notes: animal.notes,
+    canvas: animal.canvas,
+    sleepLog: animal.sleepLog,
+    createdAt: animal.createdAt,
+    updatedAt: animal.updatedAt,
     image: {
-      ...animal.image,
-      displayUrl: imageUrl(animal.image.displayPath, animal),
-      thumbnailUrl: imageUrl(thumbnailPathOrSticker, animal),
-      stickerUrl: imageUrl(stickerPath, animal),
+      backgroundRemoved: animal.image.backgroundRemoved,
+      backgroundRemovalStatus: animal.image.backgroundRemovalStatus,
+      backgroundRemovalVersion: animal.image.backgroundRemovalVersion,
+      backgroundRemovalError: animal.image.backgroundRemovalError,
+      imageUrl: imageUrl(visiblePath, animal),
     },
   };
 };
@@ -83,50 +79,39 @@ export async function POST(event: APIEvent) {
   const notes = cleanText(formData.get("notes"));
   const id = `upload_${randomUUID()}`;
   const originalPath = `images/original/${id}${extensionForUpload(file)}`;
-  const displayPath = `images/display/${id}.jpg`;
-  const processedPath = getProcessedPath(displayPath);
+  const unprocessedPath = getUnprocessedPath(id);
+  const processedPath = getProcessedPath(unprocessedPath);
   const bytes = Buffer.from(await file.arrayBuffer());
 
   await ensureZooDirs();
   await writeFile(getZooImagePath(originalPath), bytes);
 
-  let displayBytes: Buffer;
+  let unprocessedBytes: Buffer;
   try {
-    displayBytes = await createDisplayImage({ bytes, filename: file.name || originalPath });
+    unprocessedBytes = await createUnprocessedImage({ bytes, filename: file.name || originalPath });
   } catch (error) {
-    if (file.type !== "image/heic" && file.type !== "image/heif") {
-      displayBytes = bytes;
-    } else {
-      return Response.json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "The image helper could not convert that iPad photo.",
-        },
-        { status: 502 },
-      );
-    }
+    return Response.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "The image helper could not create that WebP.",
+      },
+      { status: 502 },
+    );
   }
 
-  await writeFile(getZooImagePath(displayPath), displayBytes);
-  const thumbnailBytes = await createThumbnailImage({
-    bytes: displayBytes,
-    filename: displayPath,
-  });
-  if (thumbnailBytes) {
-    await writeFile(getZooImagePath(getThumbnailPath(displayPath)), thumbnailBytes);
-  }
+  await writeFile(getZooImagePath(unprocessedPath), unprocessedBytes);
 
   const animal = await addAnimal({
     name,
     type,
     notes,
     originalPath,
-    displayPath,
+    unprocessedPath,
     backgroundRemovalStatus: "pending",
   });
-  queueBackgroundRemoval({ animalId: animal.id, displayPath, processedPath });
+  queueBackgroundRemoval({ animalId: animal.id, unprocessedPath, processedPath });
 
-  return Response.json({ animal: await toClientAnimal(animal) }, { status: 201 });
+  return Response.json({ animal: toClientAnimal(animal) }, { status: 201 });
 }

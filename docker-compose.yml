@@ -14,6 +14,10 @@ services:
       PORT: 3000
       BASE_PATH: ${BASE_PATH:-/}
       APP_DATA_DIR: /app/data
+      SITE_TITLE: "${SITE_TITLE:-Violet's Stuffed Animal Zoo}"
+      SITE_SHORT_TITLE: "${SITE_SHORT_TITLE:-Violet's Zoo}"
+      SITE_PRIMARY_COLOR: ${SITE_PRIMARY_COLOR:-orange}
+      SITE_ICON_VARIANT: ${SITE_ICON_VARIANT:-default}
       STUFFED_ZOO_PASSCODE: ${STUFFED_ZOO_PASSCODE:-passcode}
       BACKGROUND_REMOVAL_PROVIDER: ${BACKGROUND_REMOVAL_PROVIDER:-rembg}
       REMBG_SERVICE_URL: ${REMBG_SERVICE_URL:-http://rembg:7000}
@@ -29,6 +33,9 @@ services:
     restart: unless-stopped
     expose:
       - "7000"
+    volumes:
+      - rembg-model-cache:/models
 
 volumes:
   stuffed-zoo-data:
+  rembg-model-cache:

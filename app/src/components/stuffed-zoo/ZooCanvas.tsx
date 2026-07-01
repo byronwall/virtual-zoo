@@ -58,6 +58,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
   let mainContext: CanvasRenderingContext2D | null = null;
   let overlayContext: CanvasRenderingContext2D | null = null;
   let frameId: number | null = null;
+  let disposed = false;
 
   const activePointers = new Map<number, Point>();
   const imageCache = new Map<string, ImageRecord>();
@@ -94,8 +95,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
 
   const positionFor = (animal: ClientAnimal): Point => positions[animal.id] ?? animal.canvas;
   const zIndexFor = (animal: ClientAnimal) => zIndexes[animal.id] ?? animal.canvas.zIndex;
-  const imageSourceFor = (animal: ClientAnimal) =>
-    animal.image.stickerUrl || animal.image.thumbnailUrl;
+  const imageSourceFor = (animal: ClientAnimal) => animal.image.imageUrl;
 
   onMount(() => {
     mainContext = mainCanvasRef?.getContext("2d", { alpha: false }) ?? null;
@@ -115,6 +115,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
     if (shellRef) observer.observe(shellRef);
     resize();
     onCleanup(() => {
+      disposed = true;
       observer.disconnect();
       if (frameId !== null) cancelAnimationFrame(frameId);
     });
@@ -139,12 +140,14 @@ export function ZooCanvas(props: ZooCanvasProps) {
       const image = new Image();
       image.decoding = "async";
       image.onload = () => {
+        if (disposed) return;
         const record: ImageRecord = { status: "loaded", image };
         imageCache.set(src, record);
         loadedImageByAnimalId.set(id, record);
         setImageVersion((version) => version + 1);
       };
       image.onerror = () => {
+        if (disposed) return;
         imageCache.set(src, { status: "failed", image });
         setImageVersion((version) => version + 1);
       };

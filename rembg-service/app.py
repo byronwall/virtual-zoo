@@ -1,9 +1,12 @@
 from io import BytesIO
 import logging
 import platform
+import time
+import uuid
 from importlib import metadata
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Response, UploadFile
+from fastapi import FastAPI, Header, HTTPException, Response, UploadFile
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
@@ -27,6 +30,31 @@ MASK_SHRINK_PIXELS = 26
 MASK_FEATHER_PIXELS = 2.0
 FRAME_ALPHA_THRESHOLD = 8
 FRAME_FILL_RATIO = 0.86
+
+
+def format_log_context(context: dict[str, object]) -> str:
+    return " ".join(
+        f"{key}={str(value).replace(chr(10), ' ').replace(chr(13), ' ')}"
+        for key, value in context.items()
+        if value is not None
+    )
+
+
+def log_image_event(event: str, **context: object) -> None:
+    logger.info("%s %s", event, format_log_context(context))
+
+
+def elapsed_ms(start: float) -> int:
+    return round((time.perf_counter() - start) * 1000)
+
+
+def new_request_id(request_id: Optional[str]) -> str:
+    return request_id.strip() if request_id and request_id.strip() else uuid.uuid4().hex
+
+
+def image_size_label(image: Image.Image) -> str:
+    width, height = image.size
+    return f"{width}x{height}"
 
 
 def package_version(package: str) -> str:
@@ -136,7 +164,10 @@ def remove_background_bytes(content: bytes) -> bytes:
 
 @app.on_event("startup")
 def log_startup_diagnostics() -> None:
-    logger.info("rembg service starting", extra={"dependencies": dependency_versions()})
+    logger.info(
+        "rembg service starting %s",
+        format_log_context({"dependencies": dependency_versions()}),
+    )
 
 
 @app.get("/health")
@@ -164,60 +195,97 @@ def diagnostics() -> dict[str, object]:
     }
 
 
-@app.post("/prepare")
-async def prepare(file: UploadFile) -> Response:
+@app.post("/unprocessed")
+async def unprocessed(
+    file: UploadFile,
+    x_request_id: Optional[str] = Header(default=None, alias="X-Request-Id"),
+) -> Response:
+    request_id = new_request_id(x_request_id)
+    start = time.perf_counter()
     content = await file.read()
-    logger.info(
-        "prepare image requested",
-        extra={"upload_filename": file.filename, "upload_bytes": len(content)},
+    log_image_event(
+        "unprocessed image started",
+        request_id=request_id,
+        filename=file.filename,
+        input_bytes=len(content),
     )
     try:
         image = Image.open(BytesIO(content))
         image = ImageOps.exif_transpose(image)
+        source_size = image_size_label(image)
         image.thumbnail((512, 512), Image.Resampling.LANCZOS)
-        if image.mode not in ("RGB", "L"):
-            image = image.convert("RGB")
-        output = BytesIO()
-        image.save(output, format="JPEG", quality=86, optimize=True)
-        return Response(output.getvalue(), media_type="image/jpeg")
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Could not prepare image: {exc}") from exc
-
-
-@app.post("/thumbnail")
-async def thumbnail(file: UploadFile) -> Response:
-    content = await file.read()
-    logger.info(
-        "thumbnail image requested",
-        extra={"upload_filename": file.filename, "upload_bytes": len(content)},
-    )
-    try:
-        image = Image.open(BytesIO(content))
-        image = ImageOps.exif_transpose(image)
-        image.thumbnail((192, 192), Image.Resampling.LANCZOS)
         if image.mode in ("RGBA", "LA"):
             image = image.convert("RGBA")
         elif image.mode not in ("RGB", "L"):
             image = image.convert("RGB")
         output = BytesIO()
-        image.save(output, format="WEBP", quality=58, method=6)
-        return Response(output.getvalue(), media_type="image/webp")
+        image.save(output, format="WEBP", quality=82, method=6)
+        output_bytes = output.getvalue()
+        log_image_event(
+            "unprocessed image completed",
+            request_id=request_id,
+            filename=file.filename,
+            input_bytes=len(content),
+            output_bytes=len(output_bytes),
+            source_size=source_size,
+            output_size=image_size_label(image),
+            elapsed_ms=elapsed_ms(start),
+        )
+        return Response(output_bytes, media_type="image/webp")
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Could not thumbnail image: {exc}") from exc
+        log_image_event(
+            "unprocessed image failed",
+            request_id=request_id,
+            filename=file.filename,
+            input_bytes=len(content),
+            elapsed_ms=elapsed_ms(start),
+            error=repr(exc),
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"Could not create unprocessed image: {exc}",
+        ) from exc
 
 
 @app.post("/remove-background")
-async def remove_background(file: UploadFile) -> Response:
+async def remove_background(
+    file: UploadFile,
+    x_request_id: Optional[str] = Header(default=None, alias="X-Request-Id"),
+    x_stuffed_zoo_animal_id: Optional[str] = Header(
+        default=None,
+        alias="X-Stuffed-Zoo-Animal-Id",
+    ),
+) -> Response:
+    request_id = new_request_id(x_request_id)
+    start = time.perf_counter()
     content = await file.read()
-    logger.info(
-        "background removal requested",
-        extra={"upload_filename": file.filename, "upload_bytes": len(content)},
+    log_image_event(
+        "background removal started",
+        request_id=request_id,
+        animal_id=x_stuffed_zoo_animal_id,
+        filename=file.filename,
+        input_bytes=len(content),
     )
     try:
-        return Response(remove_background_bytes(content), media_type="image/webp")
+        output_bytes = remove_background_bytes(content)
+        log_image_event(
+            "background removal completed",
+            request_id=request_id,
+            animal_id=x_stuffed_zoo_animal_id,
+            filename=file.filename,
+            input_bytes=len(content),
+            output_bytes=len(output_bytes),
+            elapsed_ms=elapsed_ms(start),
+        )
+        return Response(output_bytes, media_type="image/webp")
     except Exception as exc:
-        logger.exception(
+        log_image_event(
             "background removal failed",
-            extra={"upload_filename": file.filename, "upload_bytes": len(content)},
+            request_id=request_id,
+            animal_id=x_stuffed_zoo_animal_id,
+            filename=file.filename,
+            input_bytes=len(content),
+            elapsed_ms=elapsed_ms(start),
+            error=repr(exc),
         )
         raise HTTPException(status_code=422, detail=f"Could not remove background: {exc}") from exc
