@@ -34,7 +34,7 @@ export function DetailPane(props: DetailPaneProps) {
         fallback={
           <VStack alignItems="stretch" gap="5">
             <VStack alignItems="start" gap="2">
-              <HStack gap="2" color="orange.default">
+              <HStack gap="2" color="colorPalette.plain.fg">
                 <CalendarDays size={20} />
                 <Box class={sectionTitleClass}>Sleepover calendar</Box>
               </HStack>
@@ -216,10 +216,11 @@ const paneClass = css({
   overflowX: "hidden",
   borderRadius: "2xl",
   borderWidth: "2px",
-  borderColor: "orange.subtle.border",
+  borderColor: "colorPalette.surface.border",
   bg: "bg.default",
   p: { base: "4", md: "5" },
-  boxShadow: "0 18px 48px rgba(216, 87, 42, .14)",
+  boxShadow:
+    "0 18px 48px color-mix(in srgb, var(--colors-color-palette-solid-bg) 14%, transparent)",
 });
 
 const closeAnimalButtonClass = css({
@@ -240,9 +241,9 @@ const stickerPreviewClass = css({
   placeItems: "center",
   minH: "220px",
   borderRadius: "xl",
-  bg: "amber.subtle.bg",
+  bg: "colorPalette.subtle.bg",
   backgroundImage:
-    "radial-gradient(circle at 26% 18%, rgba(255,255,255,.78) 0 2rem, transparent 2.2rem), radial-gradient(circle at 78% 22%, rgba(255, 112, 67, .18) 0 3.5rem, transparent 3.8rem)",
+    "radial-gradient(circle at 26% 18%, rgba(255,255,255,.78) 0 2rem, transparent 2.2rem), radial-gradient(circle at 78% 22%, var(--colors-color-palette-a4) 0 3.5rem, transparent 3.8rem)",
   overflow: "hidden",
   "& img": {
     maxW: "90%",
@@ -256,13 +257,13 @@ const labelClass = css({
   display: "block",
   mb: "1.5",
   fontWeight: "extrabold",
-  color: "orange.default",
+  color: "colorPalette.plain.fg",
 });
 
 const quietNoteClass = css({
   borderRadius: "lg",
-  bg: "amber.subtle.bg",
-  color: "amber.default",
+  bg: "colorPalette.subtle.bg",
+  color: "colorPalette.subtle.fg",
   px: "3",
   py: "2",
   fontWeight: "semibold",
@@ -281,8 +282,8 @@ const dayClass = css({
   minH: "72px",
   borderRadius: "lg",
   borderWidth: "2px",
-  borderColor: "amber.subtle.border",
-  bg: "amber.subtle.bg",
+  borderColor: "colorPalette.surface.border",
+  bg: "colorPalette.subtle.bg",
   p: "2",
   overflow: "hidden",
 });
@@ -290,7 +291,7 @@ const dayClass = css({
 const dayLabelClass = css({
   fontSize: "xs",
   fontWeight: "extrabold",
-  color: "orange.default",
+  color: "colorPalette.plain.fg",
   mb: "1",
 });
 

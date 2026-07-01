@@ -115,9 +115,7 @@ export const getBackgroundRemovalRetryCandidates = async (currentVersion: string
     .map((animal) => ({
       animalId: animal.id,
       displayPath: animal.image.displayPath,
-      processedPath:
-        animal.image.processedPath ??
-        `images/processed/${path.basename(animal.image.displayPath, path.extname(animal.image.displayPath))}.png`,
+      processedPath: getProcessedPath(animal.image.displayPath),
       previousStatus: animal.image.backgroundRemovalStatus,
       previousVersion: animal.image.backgroundRemovalVersion,
     }));
@@ -209,12 +207,13 @@ export const deleteAnimal = async (id: string) =>
     if (index === -1) throw new Error("Animal not found.");
     const [animal] = store.animals.splice(index, 1);
     await Promise.all(
-      [
+      Array.from(new Set([
         animal.image.originalPath,
         animal.image.displayPath,
         getThumbnailPath(animal.image.displayPath),
+        getProcessedPath(animal.image.displayPath),
         animal.image.processedPath,
-      ]
+      ]))
         .filter((imagePath): imagePath is string => !!imagePath)
         .map((imagePath) => rm(getZooImagePath(imagePath), { force: true })),
     );
@@ -264,6 +263,9 @@ const findAnimal = (store: ZooStore, id: string) => {
 
 export const getThumbnailPath = (displayPath: string) =>
   `images/thumbnails/${path.basename(displayPath, path.extname(displayPath))}.webp`;
+
+export const getProcessedPath = (displayPath: string) =>
+  `images/processed/${path.basename(displayPath, path.extname(displayPath))}.webp`;
 
 const yesterdayDate = () => {
   const date = new Date();

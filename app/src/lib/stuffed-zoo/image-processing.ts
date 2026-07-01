@@ -14,7 +14,7 @@ const defaultServiceUrl = "http://rembg:7000";
 let recoveryStarted = false;
 
 const backgroundRemovalVersion =
-  "rembg-u2net-mask-threshold1-grow50-shrink26-feather2-frame86";
+  "rembg-u2net-mask-threshold1-grow50-shrink26-feather2-frame86-webp";
 
 const getServiceUrl = () =>
   process.env.REMBG_SERVICE_URL?.replace(/\/+$/, "") || defaultServiceUrl;

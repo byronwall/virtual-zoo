@@ -13,10 +13,9 @@ import {
   resizeCanvas,
   type CanvasSize,
 } from "./ZooCanvas.drawing";
-import { clampScale, distance, eventPoint, midpoint, roundPosition, zoomAtPoint } from "./ZooCanvas.math";
+import { clampScale, distance, eventPoint, midpoint, roundPosition } from "./ZooCanvas.math";
 import { canvasClass, canvasLayerClass, canvasShellClass } from "./ZooCanvas.styles";
 import type { Point, ViewportState } from "./ZooCanvas.types";
-import { ZooCanvasControls } from "./ZooCanvasControls";
 
 type ZooCanvasProps = {
   animals: ClientAnimal[];
@@ -48,8 +47,6 @@ type ImageRecord = {
 };
 
 const DEFAULT_VIEWPORT: ViewportState = { scale: 1, x: 0, y: 0 };
-const VIEWPORT_PAN_STEP = 80;
-const VIEWPORT_ZOOM_STEP = 1.18;
 const INITIAL_IMAGE_LOAD_COUNT = 8;
 const STAGED_IMAGE_DELAY_MS = 90;
 const MAX_CANVAS_DPR = 1.5;
@@ -64,6 +61,7 @@ export function ZooCanvas(props: ZooCanvasProps) {
 
   const activePointers = new Map<number, Point>();
   const imageCache = new Map<string, ImageRecord>();
+  const loadedImageByAnimalId = new Map<string, ImageRecord>();
   let gesture: GestureState | null = null;
   const [drag, setDrag] = createSignal<DragState | null>(null);
   const [hoveredAnimalId, setHoveredAnimalId] = createSignal<string | null>(null);
@@ -126,18 +124,24 @@ export function ZooCanvas(props: ZooCanvasProps) {
     const sources = orderedAnimals()
       .slice()
       .reverse()
-      .map(imageSourceFor);
+      .map((animal) => ({ id: animal.id, src: imageSourceFor(animal) }));
     if (typeof window === "undefined") return;
     let cancelled = false;
     const timers: number[] = [];
 
-    const loadSource = (src: string) => {
+    const loadSource = (id: string, src: string) => {
       if (!src) return;
-      if (imageCache.has(src)) return;
+      const cached = imageCache.get(src);
+      if (cached) {
+        if (cached.status === "loaded") loadedImageByAnimalId.set(id, cached);
+        return;
+      }
       const image = new Image();
       image.decoding = "async";
       image.onload = () => {
-        imageCache.set(src, { status: "loaded", image });
+        const record: ImageRecord = { status: "loaded", image };
+        imageCache.set(src, record);
+        loadedImageByAnimalId.set(id, record);
         setImageVersion((version) => version + 1);
       };
       image.onerror = () => {
@@ -148,10 +152,13 @@ export function ZooCanvas(props: ZooCanvasProps) {
       image.src = src;
     };
 
-    sources.slice(0, INITIAL_IMAGE_LOAD_COUNT).forEach(loadSource);
+    sources
+      .slice(0, INITIAL_IMAGE_LOAD_COUNT)
+      .forEach((source) => loadSource(source.id, source.src));
     const loadNext = (index: number) => {
       if (cancelled || index >= sources.length) return;
-      loadSource(sources[index] ?? "");
+      const source = sources[index];
+      if (source) loadSource(source.id, source.src);
       timers.push(window.setTimeout(() => loadNext(index + 1), STAGED_IMAGE_DELAY_MS));
     };
     timers.push(window.setTimeout(() => loadNext(INITIAL_IMAGE_LOAD_COUNT), STAGED_IMAGE_DELAY_MS));
@@ -217,12 +224,14 @@ export function ZooCanvas(props: ZooCanvasProps) {
   const drawAnimal = (context: CanvasRenderingContext2D, animal: ClientAnimal, size: CanvasSize) => {
     const bounds = animalBounds(animal, size);
     const record = imageCache.get(imageSourceFor(animal));
+    const loadedRecord =
+      record?.status === "loaded" ? record : loadedImageByAnimalId.get(animal.id);
     context.save();
     context.translate(bounds.center.x, bounds.center.y);
     context.rotate(degreesToRadians(animal.canvas.rotation));
     drawSoftPlate(context, bounds.width, bounds.height);
-    if (record?.status === "loaded") {
-      context.drawImage(record.image, -bounds.width / 2, -bounds.height / 2, bounds.width, bounds.height);
+    if (loadedRecord) {
+      context.drawImage(loadedRecord.image, -bounds.width / 2, -bounds.height / 2, bounds.width, bounds.height);
     } else {
       drawPlaceholder(context, animal, bounds.width, bounds.height);
     }
@@ -374,16 +383,6 @@ export function ZooCanvas(props: ZooCanvasProps) {
   const animalById = (id: string | null) =>
     id ? props.animals.find((animal) => animal.id === id) ?? null : null;
 
-  const panViewport = (deltaX: number, deltaY: number) => {
-    setViewport((current) => ({ ...current, x: current.x + deltaX, y: current.y + deltaY }));
-  };
-
-  const zoomViewport = (factor: number) => {
-    const size = canvasSize();
-    const focalPoint = { x: size.cssWidth / 2, y: size.cssHeight / 2 };
-    setViewport((current) => zoomAtPoint(current, focalPoint, factor));
-  };
-
   const animalBounds = (animal: ClientAnimal, size: CanvasSize) => {
     const position = positionFor(animal);
     const viewportState = viewport();
@@ -402,14 +401,6 @@ export function ZooCanvas(props: ZooCanvasProps) {
 
   return (
     <Box class={canvasShellClass}>
-      <ZooCanvasControls
-        onZoomOut={() => zoomViewport(1 / VIEWPORT_ZOOM_STEP)}
-        onZoomIn={() => zoomViewport(VIEWPORT_ZOOM_STEP)}
-        onPanLeft={() => panViewport(-VIEWPORT_PAN_STEP, 0)}
-        onPanRight={() => panViewport(VIEWPORT_PAN_STEP, 0)}
-        onPanUp={() => panViewport(0, -VIEWPORT_PAN_STEP)}
-        onPanDown={() => panViewport(0, VIEWPORT_PAN_STEP)}
-      />
       <Box
         ref={shellRef}
         class={canvasClass}

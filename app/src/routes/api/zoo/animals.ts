@@ -6,6 +6,7 @@ import {
 import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
 import {
   deleteAnimal,
+  getProcessedPath,
   getThumbnailPath,
   getZooSnapshot,
   logSleepoverLastNight,
@@ -22,7 +23,6 @@ const imageVersion = (
     [
       animal.image.backgroundRemovalVersion,
       animal.image.backgroundRemovalStatus,
-      animal.updatedAt,
     ]
       .filter(Boolean)
       .join("-"),
@@ -37,9 +37,11 @@ const toClientAnimal = async (
   animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
 ) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
+  const expectedProcessedPath = getProcessedPath(animal.image.displayPath);
   const processedPath =
-    animal.image.processedPath && (await zooImageExists(animal.image.processedPath))
-      ? animal.image.processedPath
+    animal.image.processedPath === expectedProcessedPath &&
+    (await zooImageExists(expectedProcessedPath))
+      ? expectedProcessedPath
       : null;
   const stickerPath = processedPath ?? animal.image.displayPath;
   const thumbnailPathOrSticker =

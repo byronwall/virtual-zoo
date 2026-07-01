@@ -10,6 +10,7 @@ import { DetailPane } from "./DetailPane";
 import { appContentClass, appFrameClass, appHeaderClass, appLogoClass, appShellClass, appTitleClass } from "./ZooApp.styles";
 import { deletePromptClass, errorClass, passcodeBoxClass } from "./ZooApp.styles";
 import { passcodeShellClass } from "./ZooApp.styles";
+import { getSiteConfig, getSiteIconHref } from "~/lib/site-config";
 import type { ClientAnimal, ZooSnapshot } from "./types";
 
 type Draft = {
@@ -23,6 +24,7 @@ const emptyUploadDraft = (): UploadDraft => ({ ...emptyDraft(), photo: null });
 const BACKGROUND_REMOVAL_POLL_MS = 3500;
 
 export function ZooApp() {
+  const siteConfig = getSiteConfig();
   const [session, { refetch: refetchSession }] = createResource(fetchSession);
   const [snapshot, { refetch }] = createResource(
     () => session()?.authenticated,
@@ -181,6 +183,7 @@ export function ZooApp() {
           <PasscodeView
             passcode={passcode()}
             error={passcodeError()}
+            title={siteConfig.title}
             onPasscodeChange={setPasscode}
             onLogin={handleLogin}
           />
@@ -191,14 +194,14 @@ export function ZooApp() {
             <HStack alignItems="center" gap="3" minW="0">
               <img
                 class={appLogoClass}
-                src="/android-chrome-192x192.png"
+                src={getSiteIconHref(siteConfig, "android-chrome-192x192.png")}
                 width="56"
                 height="56"
                 alt=""
                 aria-hidden="true"
               />
               <Box minW="0">
-                <Box class={appTitleClass}>Violet's Stuffed Animal Zoo</Box>
+                <Box class={appTitleClass}>{siteConfig.title}</Box>
                 <Text color="fg.muted">Move friends around, add photos, and track sleepovers.</Text>
               </Box>
             </HStack>
@@ -276,6 +279,7 @@ export function ZooApp() {
 function PasscodeView(props: {
   passcode: string;
   error: string;
+  title: string;
   onPasscodeChange: (value: string) => void;
   onLogin: () => void;
 }) {
@@ -284,7 +288,7 @@ function PasscodeView(props: {
       <VStack class={passcodeBoxClass} alignItems="stretch" gap="4">
         <HStack gap="3">
           <ShieldCheck size={26} />
-          <Box class={appTitleClass}>Violet's Stuffed Animal Zoo</Box>
+          <Box class={appTitleClass}>{props.title}</Box>
         </HStack>
         <Text color="fg.muted">Enter the family passcode once to open the zoo on this iPad.</Text>
         <Input

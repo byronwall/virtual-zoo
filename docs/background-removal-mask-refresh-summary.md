@@ -4,7 +4,7 @@
 
 - Request: make the `grow50 feather2` background-removal probe the production option and ensure production regenerates already-processed images.
 - Area changed: the `rembg-service` background-removal endpoint and the stuffed-zoo app's background-removal recovery/version tracking.
-- Constraints: existing uploads are file-backed under `APP_DATA_DIR`; processed PNGs are generated asynchronously by the Python helper service; completed images previously had no algorithm version marker, so the app could not distinguish old cutouts from current cutouts.
+- Constraints: existing uploads are file-backed under `APP_DATA_DIR`; processed WebP cutouts are generated asynchronously by the Python helper service; completed images previously had no algorithm version marker, so the app could not distinguish old cutouts from current cutouts.
 
 ## 2) Major Changes Delivered
 
@@ -27,7 +27,7 @@
   - Completion now records the algorithm version.
 - `app/src/lib/stuffed-zoo/image-processing.ts`
   - Added current version string `rembg-u2net-mask-threshold1-grow50-shrink26-feather2`.
-  - Recovery logs stale completed images and requeues them, causing production to overwrite old processed PNGs after deployment and the next zoo data load.
+  - Recovery logs stale completed images and requeues them, causing production to overwrite old processed cutouts after deployment and the next zoo data load.
 
 Intentionally unchanged: upload/display/thumbnail storage paths and the public image URL format remain the same.
 

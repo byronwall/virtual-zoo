@@ -11,6 +11,7 @@ import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
 import {
   addAnimal,
   ensureZooDirs,
+  getProcessedPath,
   getThumbnailPath,
   getZooImagePath,
   zooImageExists,
@@ -26,7 +27,6 @@ const imageVersion = (animal: Awaited<ReturnType<typeof addAnimal>>) =>
     [
       animal.image.backgroundRemovalVersion,
       animal.image.backgroundRemovalStatus,
-      animal.updatedAt,
     ]
       .filter(Boolean)
       .join("-"),
@@ -46,9 +46,11 @@ const extensionForUpload = (file: File) => {
 
 const toClientAnimal = async (animal: Awaited<ReturnType<typeof addAnimal>>) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
+  const expectedProcessedPath = getProcessedPath(animal.image.displayPath);
   const processedPath =
-    animal.image.processedPath && (await zooImageExists(animal.image.processedPath))
-      ? animal.image.processedPath
+    animal.image.processedPath === expectedProcessedPath &&
+    (await zooImageExists(expectedProcessedPath))
+      ? expectedProcessedPath
       : null;
   const stickerPath = processedPath ?? animal.image.displayPath;
   const thumbnailPathOrSticker =
@@ -82,7 +84,7 @@ export async function POST(event: APIEvent) {
   const id = `upload_${randomUUID()}`;
   const originalPath = `images/original/${id}${extensionForUpload(file)}`;
   const displayPath = `images/display/${id}.jpg`;
-  const processedPath = `images/processed/${id}.png`;
+  const processedPath = getProcessedPath(displayPath);
   const bytes = Buffer.from(await file.arrayBuffer());
 
   await ensureZooDirs();

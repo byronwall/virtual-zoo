@@ -130,7 +130,7 @@ def remove_background_bytes(content: bytes) -> bytes:
     source.putalpha(postprocess_plush_mask(mask))
     source = frame_cutout(source)
     output = BytesIO()
-    source.save(output, format="PNG", compress_level=4)
+    source.save(output, format="WEBP", quality=76, alpha_quality=82, method=6)
     return output.getvalue()
 
 
@@ -214,7 +214,7 @@ async def remove_background(file: UploadFile) -> Response:
         extra={"upload_filename": file.filename, "upload_bytes": len(content)},
     )
     try:
-        return Response(remove_background_bytes(content), media_type="image/png")
+        return Response(remove_background_bytes(content), media_type="image/webp")
     except Exception as exc:
         logger.exception(
             "background removal failed",

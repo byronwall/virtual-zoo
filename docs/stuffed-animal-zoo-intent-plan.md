@@ -140,7 +140,7 @@ Suggested JSON shape:
       "image": {
         "originalPath": "images/original/animal_abc123.heic",
         "displayPath": "images/display/animal_abc123.jpg",
-        "processedPath": "images/processed/animal_abc123.png",
+        "processedPath": "images/processed/animal_abc123.webp",
         "backgroundRemoved": true,
         "backgroundRemovalStatus": "completed"
       },
@@ -234,8 +234,8 @@ Processing steps:
 2. If the original is HEIC/HEIF, convert it to JPEG.
 3. Generate a display JPEG around 512px on its longest side.
 4. Queue asynchronous `rembg` processing against the display image or a suitable intermediate image.
-5. Store the transparent output as PNG under `images/processed/`.
-6. Render processed PNG when available, otherwise render the display JPEG.
+5. Store the transparent output as WebP under `images/processed/`.
+6. Render processed WebP when available, otherwise render the display JPEG.
 
 The full-resolution original does not need to be used in the normal UI.
 

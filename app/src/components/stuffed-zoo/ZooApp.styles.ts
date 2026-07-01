@@ -13,9 +13,9 @@ export const appShellClass = css({
   maxW: "100dvw",
   maxH: "100dvh",
   overflow: "hidden",
-  bg: "orange.subtle.bg",
+  bg: "colorPalette.subtle.bg",
   backgroundImage:
-    "radial-gradient(circle at 12% 10%, rgba(255, 197, 61, .42) 0 9rem, transparent 9.5rem), radial-gradient(circle at 92% 18%, rgba(76, 195, 138, .28) 0 10rem, transparent 10.5rem), linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,0))",
+    "radial-gradient(circle at 12% 10%, var(--colors-color-palette-a4) 0 9rem, transparent 9.5rem), radial-gradient(circle at 92% 18%, var(--colors-color-palette-a3) 0 10rem, transparent 10.5rem), linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,0))",
   color: "fg.default",
 });
 
@@ -75,8 +75,9 @@ export const passcodeBoxClass = css({
   borderRadius: "2xl",
   bg: "bg.default",
   borderWidth: "2px",
-  borderColor: "orange.subtle.border",
-  boxShadow: "0 22px 60px rgba(216, 87, 42, .2)",
+  borderColor: "colorPalette.surface.border",
+  boxShadow:
+    "0 22px 60px color-mix(in srgb, var(--colors-color-palette-solid-bg) 20%, transparent)",
 });
 
 export const errorClass = css({
@@ -105,15 +106,15 @@ export const photoPickerClass = css({
   borderRadius: "xl",
   borderWidth: "2px",
   borderStyle: "dashed",
-  borderColor: "orange.outline.border",
-  bg: "amber.subtle.bg",
-  color: "orange.default",
+  borderColor: "colorPalette.outline.border",
+  bg: "colorPalette.subtle.bg",
+  color: "colorPalette.plain.fg",
   fontWeight: "bold",
   cursor: "pointer",
   transition: "background-color 140ms ease, border-color 140ms ease, transform 140ms ease",
   _hover: {
-    bg: "orange.subtle.bg",
-    borderColor: "orange.default",
+    bg: "colorPalette.subtle.bg.hover",
+    borderColor: "colorPalette.solid.bg",
     transform: "translateY(-1px)",
   },
   "& input": {

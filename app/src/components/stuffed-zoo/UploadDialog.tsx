@@ -129,7 +129,7 @@ function AnimalTypeQuickPicks(props: {
             <Button
               size="sm"
               variant={active() ? "solid" : "outline"}
-              colorPalette={active() ? "orange" : "gray"}
+              colorPalette={active() ? undefined : "gray"}
               aria-pressed={active()}
               onClick={() => props.onChange(type)}
             >
