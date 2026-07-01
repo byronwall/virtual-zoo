@@ -1,16 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   getBackgroundRemovalRetryCandidates,
-  getProcessedPath,
-  getUnprocessedPath,
   getZooImagePath,
-  type getZooSnapshot,
   markBackgroundRemovalCompleted,
   markBackgroundRemovalFailed,
   markBackgroundRemovalPending,
-  replaceUnprocessedImage,
 } from "./store";
 
 const defaultServiceUrl = "http://rembg:7000";
@@ -55,41 +51,6 @@ export const createUnprocessedImage = async (input: {
     throw new Error("The image helper is required to create the unprocessed WebP.");
   }
   return postImageForBytes("/unprocessed", input.bytes, input.filename);
-};
-
-export const ensureSnapshotUnprocessedImages = async (
-  snapshot: Awaited<ReturnType<typeof getZooSnapshot>>,
-) => {
-  for (const animal of snapshot.animals) {
-    if (await hasClientReadyUnprocessedImage(animal.image.unprocessedPath)) continue;
-
-    const nextUnprocessedPath = getUnprocessedPath(
-      path.basename(animal.image.unprocessedPath, path.extname(animal.image.unprocessedPath)),
-    );
-    try {
-      const originalBytes = await readFile(getZooImagePath(animal.image.originalPath));
-      const unprocessedBytes = await createUnprocessedImage({
-        bytes: originalBytes,
-        filename: path.basename(animal.image.originalPath),
-      });
-      await writeFile(getZooImagePath(nextUnprocessedPath), unprocessedBytes);
-      const migratedAnimal = await replaceUnprocessedImage({
-        id: animal.id,
-        unprocessedPath: nextUnprocessedPath,
-      });
-      queueBackgroundRemoval({
-        animalId: migratedAnimal.id,
-        unprocessedPath: migratedAnimal.image.unprocessedPath,
-        processedPath: getProcessedPath(migratedAnimal.image.unprocessedPath),
-      });
-    } catch (error) {
-      console.error("Stuffed zoo unprocessed image migration failed", {
-        animalId: animal.id,
-        originalPath: animal.image.originalPath,
-        error,
-      });
-    }
-  }
 };
 
 export const queueBackgroundRemoval = (input: {
@@ -212,19 +173,5 @@ const logBackgroundRemovalBacklog = async (label: string) => {
     });
   } catch (error) {
     console.error("Stuffed zoo background removal backlog check failed", { label, error });
-  }
-};
-
-const hasClientReadyUnprocessedImage = async (unprocessedPath: string) =>
-  unprocessedPath.startsWith("images/unprocessed/") &&
-  path.extname(unprocessedPath).toLowerCase() === ".webp" &&
-  (await fileExists(getZooImagePath(unprocessedPath)));
-
-const fileExists = async (filePath: string) => {
-  try {
-    await stat(filePath);
-    return true;
-  } catch {
-    return false;
   }
 };

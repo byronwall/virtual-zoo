@@ -11,6 +11,7 @@ const normalizedBasePath =
 export default defineConfig({
   server: {
     baseURL: normalizedBasePath,
+    plugins: ["./src/server/stuffed-zoo-recovery.ts"],
   },
   vite: {
     plugins: [lucidePreprocess(), tsconfigPaths()],

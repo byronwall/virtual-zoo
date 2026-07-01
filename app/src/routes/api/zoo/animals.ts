@@ -1,8 +1,4 @@
 import type { APIEvent } from "@solidjs/start/server";
-import {
-  ensureBackgroundRemovalRecoveryStarted,
-  ensureSnapshotUnprocessedImages,
-} from "~/lib/stuffed-zoo/image-processing";
 import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
 import {
   deleteAnimal,
@@ -58,13 +54,10 @@ const toClientAnimal = (
 
 export async function GET(event: APIEvent) {
   requireZooPasscode(event);
-  ensureBackgroundRemovalRecoveryStarted();
   const snapshot = await getZooSnapshot();
-  await ensureSnapshotUnprocessedImages(snapshot);
-  const migratedSnapshot = await getZooSnapshot();
-  const animals = migratedSnapshot.animals.map(toClientAnimal);
+  const animals = snapshot.animals.map(toClientAnimal);
   return Response.json({
-    ...migratedSnapshot,
+    ...snapshot,
     animals,
   });
 }
