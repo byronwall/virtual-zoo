@@ -21,6 +21,16 @@ const cleanType = (value: FormDataEntryValue | null) =>
 
 const cleanText = (value: FormDataEntryValue | null) => String(value ?? "").trim();
 
+const imageVersion = (animal: Awaited<ReturnType<typeof addAnimal>>) =>
+  encodeURIComponent(
+    animal.image.backgroundRemovalVersion ??
+      animal.image.backgroundRemovalStatus ??
+      animal.updatedAt,
+  );
+
+const imageUrl = (path: string, animal: Awaited<ReturnType<typeof addAnimal>>) =>
+  `/api/zoo/images/${path}?v=${imageVersion(animal)}`;
+
 const extensionForUpload = (file: File) => {
   const fromName = extname(file.name).toLowerCase();
   if (fromName) return fromName;
@@ -43,9 +53,9 @@ const toClientAnimal = async (animal: Awaited<ReturnType<typeof addAnimal>>) => 
     ...animal,
     image: {
       ...animal.image,
-      displayUrl: `/api/zoo/images/${animal.image.displayPath}`,
-      thumbnailUrl: `/api/zoo/images/${thumbnailPathOrSticker}`,
-      stickerUrl: `/api/zoo/images/${stickerPath}`,
+      displayUrl: imageUrl(animal.image.displayPath, animal),
+      thumbnailUrl: imageUrl(thumbnailPathOrSticker, animal),
+      stickerUrl: imageUrl(stickerPath, animal),
     },
   };
 };

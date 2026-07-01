@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, onMount, Show } from "solid-js";
+import { createEffect, createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Plus, Printer, ShieldCheck } from "lucide-solid";
 import { Box, Grid, HStack, VStack } from "styled-system/jsx";
@@ -20,6 +20,7 @@ type Draft = {
 
 const emptyDraft = (): Draft => ({ name: "", type: "", notes: "" });
 const emptyUploadDraft = (): UploadDraft => ({ ...emptyDraft(), photo: null });
+const BACKGROUND_REMOVAL_POLL_MS = 3500;
 
 export function ZooApp() {
   const [session, { refetch: refetchSession }] = createResource(fetchSession);
@@ -58,6 +59,21 @@ export function ZooApp() {
       type: animal.type,
       notes: animal.notes,
     });
+  });
+
+  createEffect(() => {
+    if (!session.latest?.authenticated) return;
+    const hasQueuedImages = animals().some(
+      (animal) =>
+        animal.image.backgroundRemovalStatus === "pending" ||
+        animal.image.backgroundRemovalStatus === "failed",
+    );
+    if (!hasQueuedImages) return;
+
+    const timer = window.setInterval(() => {
+      void refetch();
+    }, BACKGROUND_REMOVAL_POLL_MS);
+    onCleanup(() => window.clearInterval(timer));
   });
 
   const handleLogin = async () => {

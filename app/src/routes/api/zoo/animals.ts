@@ -15,23 +15,38 @@ import {
 } from "~/lib/stuffed-zoo/store";
 import { updateAnimalPositionSchema, updateAnimalSchema } from "~/lib/stuffed-zoo/schema";
 
-const imageUrl = (path: string) => `/api/zoo/images/${path}`;
+const imageVersion = (
+  animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
+) =>
+  encodeURIComponent(
+    animal.image.backgroundRemovalVersion ??
+      animal.image.backgroundRemovalStatus ??
+      animal.updatedAt,
+  );
+
+const imageUrl = (
+  path: string,
+  animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
+) => `/api/zoo/images/${path}?v=${imageVersion(animal)}`;
 
 const toClientAnimal = async (
   animal: Awaited<ReturnType<typeof getZooSnapshot>>["animals"][number],
 ) => {
   const thumbnailPath = getThumbnailPath(animal.image.displayPath);
   const stickerPath = animal.image.processedPath ?? animal.image.displayPath;
-  const thumbnailPathOrSticker = (await zooImageExists(thumbnailPath))
-    ? thumbnailPath
-    : stickerPath;
+  const thumbnailPathOrSticker =
+    animal.image.backgroundRemoved && animal.image.processedPath
+      ? animal.image.processedPath
+      : (await zooImageExists(thumbnailPath))
+        ? thumbnailPath
+        : stickerPath;
   return {
     ...animal,
     image: {
       ...animal.image,
-      displayUrl: imageUrl(animal.image.displayPath),
-      thumbnailUrl: imageUrl(thumbnailPathOrSticker),
-      stickerUrl: imageUrl(stickerPath),
+      displayUrl: imageUrl(animal.image.displayPath, animal),
+      thumbnailUrl: imageUrl(thumbnailPathOrSticker, animal),
+      stickerUrl: imageUrl(stickerPath, animal),
     },
   };
 };
