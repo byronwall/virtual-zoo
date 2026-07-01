@@ -97,14 +97,20 @@ const withWriteLock = async <T>(operation: (store: ZooStore) => Promise<T>) => {
 
 export const getZooSnapshot = async () => readStore();
 
-export const getBackgroundRemovalRetryCandidates = async () => {
+export const getBackgroundRemovalRetryCandidates = async (currentVersion: string) => {
   const store = await readStore();
   return store.animals
     .filter(
-      (animal) =>
-        !animal.image.backgroundRemoved &&
-        (animal.image.backgroundRemovalStatus === "pending" ||
-          animal.image.backgroundRemovalStatus === "failed"),
+      (animal) => {
+        const needsInitialProcessing =
+          !animal.image.backgroundRemoved &&
+          (animal.image.backgroundRemovalStatus === "pending" ||
+            animal.image.backgroundRemovalStatus === "failed");
+        const needsVersionRefresh =
+          animal.image.backgroundRemovalStatus === "completed" &&
+          animal.image.backgroundRemovalVersion !== currentVersion;
+        return needsInitialProcessing || needsVersionRefresh;
+      },
     )
     .map((animal) => ({
       animalId: animal.id,
@@ -113,6 +119,7 @@ export const getBackgroundRemovalRetryCandidates = async () => {
         animal.image.processedPath ??
         `images/processed/${path.basename(animal.image.displayPath, path.extname(animal.image.displayPath))}.png`,
       previousStatus: animal.image.backgroundRemovalStatus,
+      previousVersion: animal.image.backgroundRemovalVersion,
     }));
 };
 
@@ -214,12 +221,17 @@ export const deleteAnimal = async (id: string) =>
     return animal;
   });
 
-export const markBackgroundRemovalCompleted = async (id: string, processedPath: string) =>
+export const markBackgroundRemovalCompleted = async (
+  id: string,
+  processedPath: string,
+  version: string,
+) =>
   withWriteLock(async (store) => {
     const animal = findAnimal(store, id);
     animal.image.processedPath = processedPath;
     animal.image.backgroundRemoved = true;
     animal.image.backgroundRemovalStatus = "completed";
+    animal.image.backgroundRemovalVersion = version;
     delete animal.image.backgroundRemovalError;
     animal.updatedAt = nowIso();
     return animal;

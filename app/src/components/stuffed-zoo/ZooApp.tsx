@@ -1,13 +1,15 @@
-import { createEffect, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createResource, createSignal, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
-import { Camera, Plus, ShieldCheck } from "lucide-solid";
+import { Plus, Printer, ShieldCheck } from "lucide-solid";
 import { Box, Grid, HStack, VStack } from "styled-system/jsx";
-import { Button, Input, SimpleDialog, Text, Textarea } from "~/components/ui";
+import { Button, Input, Text } from "~/components/ui";
+import { ContactSheetDialog } from "./ContactSheetDialog";
+import { UploadDialog, type UploadDraft } from "./UploadDialog";
 import { ZooCanvas } from "./ZooCanvas";
 import { DetailPane } from "./DetailPane";
-import { appContentClass, appFrameClass, appHeaderClass, appShellClass, appTitleClass } from "./ZooApp.styles";
-import { deletePromptClass, errorClass, labelClass, passcodeBoxClass } from "./ZooApp.styles";
-import { passcodeShellClass, photoMediaRowClass, photoPickerClass, photoPreviewClass, typeQuickPickRowClass } from "./ZooApp.styles";
+import { appContentClass, appFrameClass, appHeaderClass, appLogoClass, appShellClass, appTitleClass } from "./ZooApp.styles";
+import { deletePromptClass, errorClass, passcodeBoxClass } from "./ZooApp.styles";
+import { passcodeShellClass } from "./ZooApp.styles";
 import type { ClientAnimal, ZooSnapshot } from "./types";
 
 type Draft = {
@@ -15,12 +17,6 @@ type Draft = {
   type: string;
   notes: string;
 };
-
-type UploadDraft = Draft & {
-  photo: File | null;
-};
-
-const commonAnimalTypes = ["bear", "dog", "cat", "bunny", "dinosaur", "unicorn", "horse", "lion"];
 
 const emptyDraft = (): Draft => ({ name: "", type: "", notes: "" });
 const emptyUploadDraft = (): UploadDraft => ({ ...emptyDraft(), photo: null });
@@ -35,6 +31,7 @@ export function ZooApp() {
   const [passcode, setPasscode] = createSignal("");
   const [passcodeError, setPasscodeError] = createSignal("");
   const [uploadOpen, setUploadOpen] = createSignal(false);
+  const [contactSheetOpen, setContactSheetOpen] = createSignal(false);
   const [deleteConfirming, setDeleteConfirming] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [draft, setDraft] = createStore<Draft>(emptyDraft());
@@ -175,20 +172,41 @@ export function ZooApp() {
       >
         <VStack class={appFrameClass} alignItems="stretch" gap="3" p={{ base: "3", md: "4" }}>
           <HStack class={appHeaderClass} justifyContent="space-between" gap="3">
-            <Box>
-              <Box class={appTitleClass}>Violet's Stuffed Animal Zoo</Box>
-              <Text color="fg.muted">Move friends around, add photos, and track sleepovers.</Text>
-            </Box>
-            <Button
-              size="lg"
-              onClick={() => {
-                setUploadDraft(emptyUploadDraft());
-                setUploadOpen(true);
-              }}
-            >
-              <Plus size={20} />
-              Add friend
-            </Button>
+            <HStack alignItems="center" gap="3" minW="0">
+              <img
+                class={appLogoClass}
+                src="/android-chrome-192x192.png"
+                width="56"
+                height="56"
+                alt=""
+                aria-hidden="true"
+              />
+              <Box minW="0">
+                <Box class={appTitleClass}>Violet's Stuffed Animal Zoo</Box>
+                <Text color="fg.muted">Move friends around, add photos, and track sleepovers.</Text>
+              </Box>
+            </HStack>
+            <HStack gap="2" flexWrap="wrap" justifyContent="end">
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={animals().length === 0}
+                onClick={() => setContactSheetOpen(true)}
+              >
+                <Printer size={20} />
+                Print list
+              </Button>
+              <Button
+                size="lg"
+                onClick={() => {
+                  setUploadDraft(emptyUploadDraft());
+                  setUploadOpen(true);
+                }}
+              >
+                <Plus size={20} />
+                Add friend
+              </Button>
+            </HStack>
           </HStack>
 
           <Grid class={appContentClass} gap="4">
@@ -222,6 +240,12 @@ export function ZooApp() {
         onDraftChange={(field, value) => setUploadDraft(field, value)}
         onPhotoChange={(photo) => setUploadDraft("photo", photo)}
         onUpload={handleUpload}
+      />
+
+      <ContactSheetDialog
+        open={contactSheetOpen()}
+        animals={animals()}
+        onClose={() => setContactSheetOpen(false)}
       />
 
       <Show when={deleteConfirming()}>
@@ -265,128 +289,6 @@ function PasscodeView(props: {
     </Box>
   );
 }
-
-function UploadDialog(props: {
-  open: boolean;
-  draft: UploadDraft;
-  busy: boolean;
-  onClose: () => void;
-  onDraftChange: (field: "name" | "type" | "notes", value: string) => void;
-  onPhotoChange: (photo: File | null) => void;
-  onUpload: () => void;
-}) {
-  const [previewUrl, setPreviewUrl] = createSignal<string | null>(null);
-
-  createEffect(() => {
-    const photo = props.draft.photo;
-    if (!photo) {
-      setPreviewUrl(null);
-      return;
-    }
-
-    const url = URL.createObjectURL(photo);
-    setPreviewUrl(url);
-    onCleanup(() => URL.revokeObjectURL(url));
-  });
-
-  return (
-    <SimpleDialog
-      open={props.open}
-      onOpenChange={(open) => {
-        if (!open) props.onClose();
-      }}
-      title="Add a stuffed friend"
-      description="Take a picture on the iPad, then give this friend a name."
-      footer={
-        <HStack justifyContent="end" gap="2">
-          <Button variant="outline" onClick={props.onClose}>Cancel</Button>
-          <Button disabled={!props.draft.photo || props.busy} onClick={props.onUpload}>
-            Add to zoo
-          </Button>
-        </HStack>
-      }
-    >
-      <VStack alignItems="stretch" gap="4" w="full">
-        <Box class={photoMediaRowClass}>
-          <label class={photoPickerClass}>
-            <Camera size={22} />
-            <span>{props.draft.photo ? props.draft.photo.name : "Take or choose a photo"}</span>
-            <input
-              type="file"
-              accept="image/*,.heic,.heif"
-              capture="environment"
-              onChange={(event) => props.onPhotoChange(event.currentTarget.files?.[0] ?? null)}
-            />
-          </label>
-          <Box class={photoPreviewClass}>
-            <Show when={previewUrl()} fallback={<span>No photo yet</span>}>
-              {(url) => <img src={url()} alt="Selected stuffed animal preview" />}
-            </Show>
-          </Box>
-        </Box>
-        <Box>
-          <label class={labelClass} for="new-animal-name">Name</label>
-          <Input
-            id="new-animal-name"
-            value={props.draft.name}
-            onInput={(event) => props.onDraftChange("name", event.currentTarget.value)}
-          />
-        </Box>
-        <Box>
-          <label class={labelClass} for="new-animal-type">Type</label>
-          <Input
-            id="new-animal-type"
-            value={props.draft.type}
-            onInput={(event) => props.onDraftChange("type", event.currentTarget.value)}
-          />
-          <AnimalTypeQuickPicks
-            value={props.draft.type}
-            onChange={(value) => props.onDraftChange("type", value)}
-          />
-        </Box>
-        <Box>
-          <label class={labelClass} for="new-animal-notes">Notes</label>
-          <Textarea
-            id="new-animal-notes"
-            minH="24"
-            value={props.draft.notes}
-            onInput={(event) => props.onDraftChange("notes", event.currentTarget.value)}
-          />
-        </Box>
-      </VStack>
-    </SimpleDialog>
-  );
-}
-
-function AnimalTypeQuickPicks(props: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const normalizedValue = () => normalizeAnimalType(props.value);
-
-  return (
-    <Box class={typeQuickPickRowClass} aria-label="Common animal types">
-      <For each={commonAnimalTypes}>
-        {(type) => {
-          const active = () => normalizedValue() === normalizeAnimalType(type);
-          return (
-            <Button
-              size="sm"
-              variant={active() ? "solid" : "outline"}
-              colorPalette={active() ? "orange" : "gray"}
-              aria-pressed={active()}
-              onClick={() => props.onChange(type)}
-            >
-              {type}
-            </Button>
-          );
-        }}
-      </For>
-    </Box>
-  );
-}
-
-const normalizeAnimalType = (value: string) => value.trim().toLowerCase();
 
 const fetchSession = async () =>
   typeof window === "undefined"

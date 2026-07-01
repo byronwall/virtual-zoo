@@ -23,6 +23,7 @@ export const animalSchema = z.object({
     processedPath: z.string().optional(),
     backgroundRemoved: z.boolean(),
     backgroundRemovalStatus: backgroundRemovalStatusSchema,
+    backgroundRemovalVersion: z.string().optional(),
     backgroundRemovalError: z.string().optional(),
   }),
   canvas: z.object({

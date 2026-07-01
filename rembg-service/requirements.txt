@@ -5,6 +5,7 @@ numpy==1.26.4
 numba==0.60.0
 llvmlite==0.43.0
 onnxruntime==1.19.2
+opencv-python-headless==4.11.0.86
 pillow==10.4.0
 pillow-heif==0.18.0
 python-multipart==0.0.20

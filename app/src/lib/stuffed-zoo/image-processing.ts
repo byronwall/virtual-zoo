@@ -13,6 +13,8 @@ import {
 const defaultServiceUrl = "http://rembg:7000";
 let recoveryStarted = false;
 
+const backgroundRemovalVersion = "rembg-u2net-mask-threshold1-grow50-shrink26-feather2";
+
 const getServiceUrl = () =>
   process.env.REMBG_SERVICE_URL?.replace(/\/+$/, "") || defaultServiceUrl;
 
@@ -107,7 +109,7 @@ export const ensureBackgroundRemovalRecoveryStarted = () => {
 };
 
 const recoverBackgroundRemovalQueue = async () => {
-  const candidates = await getBackgroundRemovalRetryCandidates();
+  const candidates = await getBackgroundRemovalRetryCandidates(backgroundRemovalVersion);
   if (candidates.length === 0) {
     console.info("Stuffed zoo background removal recovery found no queued images.");
     return;
@@ -117,6 +119,11 @@ const recoverBackgroundRemovalQueue = async () => {
     count: candidates.length,
     failed: candidates.filter((candidate) => candidate.previousStatus === "failed").length,
     pending: candidates.filter((candidate) => candidate.previousStatus === "pending").length,
+    stale: candidates.filter(
+      (candidate) =>
+        candidate.previousStatus === "completed" &&
+        candidate.previousVersion !== backgroundRemovalVersion,
+    ).length,
   });
 
   for (const candidate of candidates) {
@@ -144,7 +151,11 @@ const removeBackground = async (input: {
   if (thumbnailBytes) {
     await writeFile(getZooImagePath(getThumbnailPath(input.displayPath)), thumbnailBytes);
   }
-  await markBackgroundRemovalCompleted(input.animalId, input.processedPath);
+  await markBackgroundRemovalCompleted(
+    input.animalId,
+    input.processedPath,
+    backgroundRemovalVersion,
+  );
 };
 
 const fileExists = async (filePath: string) => {

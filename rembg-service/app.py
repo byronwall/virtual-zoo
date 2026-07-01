@@ -4,6 +4,8 @@ import platform
 from importlib import metadata
 
 from fastapi import FastAPI, HTTPException, Response, UploadFile
+import cv2
+import numpy as np
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener
 
@@ -15,11 +17,14 @@ rembg_remove = None
 rembg_import_error = None
 
 REMBG_OPTIONS = {
-    "alpha_matting": True,
-    "alpha_matting_foreground_threshold": 225,
-    "alpha_matting_background_threshold": 15,
-    "alpha_matting_erode_size": 6,
+    "alpha_matting": False,
+    "only_mask": True,
 }
+
+MASK_THRESHOLD = 1
+MASK_GROW_PIXELS = 50
+MASK_SHRINK_PIXELS = 26
+MASK_FEATHER_PIXELS = 2.0
 
 
 def package_version(package: str) -> str:
@@ -38,6 +43,7 @@ def dependency_versions() -> dict[str, str]:
         "onnxruntime": package_version("onnxruntime"),
         "pillow": package_version("pillow"),
         "pillow-heif": package_version("pillow-heif"),
+        "opencv-python-headless": package_version("opencv-python-headless"),
         "pymatting": package_version("pymatting"),
         "rembg": package_version("rembg"),
     }
@@ -58,6 +64,37 @@ def get_rembg_remove():
         rembg_import_error = repr(exc)
         logger.exception("rembg import failed", extra={"dependencies": dependency_versions()})
         raise RuntimeError(f"rembg import failed: {exc}") from exc
+
+
+def postprocess_plush_mask(mask: Image.Image) -> Image.Image:
+    mask_array = np.array(mask.convert("L"))
+    mask_array = np.where(mask_array >= MASK_THRESHOLD, 255, 0).astype(np.uint8)
+    grow_kernel = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE,
+        (MASK_GROW_PIXELS * 2 + 1, MASK_GROW_PIXELS * 2 + 1),
+    )
+    shrink_kernel = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE,
+        (MASK_SHRINK_PIXELS * 2 + 1, MASK_SHRINK_PIXELS * 2 + 1),
+    )
+    mask_array = cv2.dilate(mask_array, grow_kernel)
+    mask_array = cv2.erode(mask_array, shrink_kernel)
+    mask_array = cv2.GaussianBlur(mask_array, (0, 0), MASK_FEATHER_PIXELS)
+    return Image.fromarray(mask_array, "L")
+
+
+def remove_background_bytes(content: bytes) -> bytes:
+    source = Image.open(BytesIO(content))
+    source = ImageOps.exif_transpose(source).convert("RGBA")
+    remove = get_rembg_remove()
+    mask_bytes = remove(content, **REMBG_OPTIONS)
+    mask = Image.open(BytesIO(mask_bytes)).convert("L")
+    if mask.size != source.size:
+        mask = mask.resize(source.size, Image.Resampling.LANCZOS)
+    source.putalpha(postprocess_plush_mask(mask))
+    output = BytesIO()
+    source.save(output, format="PNG", compress_level=4)
+    return output.getvalue()
 
 
 @app.on_event("startup")
@@ -140,8 +177,7 @@ async def remove_background(file: UploadFile) -> Response:
         extra={"upload_filename": file.filename, "upload_bytes": len(content)},
     )
     try:
-        remove = get_rembg_remove()
-        return Response(remove(content, **REMBG_OPTIONS), media_type="image/png")
+        return Response(remove_background_bytes(content), media_type="image/png")
     except Exception as exc:
         logger.exception(
             "background removal failed",

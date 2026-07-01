@@ -4,3 +4,4 @@ app/.output/
 app/.vinxi/
 app/styled-system/
 node_modules/
+tmp/

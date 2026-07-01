@@ -36,6 +36,14 @@ export const appHeaderClass = css({
   },
 });
 
+export const appLogoClass = css({
+  flex: "0 0 auto",
+  w: { base: "12", md: "14" },
+  h: { base: "12", md: "14" },
+  borderRadius: "xl",
+  boxShadow: "sm",
+});
+
 export const appContentClass = css({
   flex: "1 1 auto",
   minW: "0",
