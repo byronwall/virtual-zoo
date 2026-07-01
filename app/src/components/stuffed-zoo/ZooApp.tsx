@@ -22,6 +22,8 @@ type Draft = {
 const emptyDraft = (): Draft => ({ name: "", type: "", notes: "" });
 const emptyUploadDraft = (): UploadDraft => ({ ...emptyDraft(), photo: null });
 const BACKGROUND_REMOVAL_POLL_MS = 3500;
+const ZOO_PASSCODE_STORAGE_KEY = "stuffed_zoo_pass";
+const ZOO_PASSCODE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 20;
 
 export function ZooApp() {
   const siteConfig = getSiteConfig();
@@ -90,8 +92,8 @@ export function ZooApp() {
     }
     const body = (await response.json()) as { cookieValue?: string };
     if (body.cookieValue) {
-      document.cookie = `stuffed_zoo_pass=${encodeURIComponent(body.cookieValue)}; Path=/; Max-Age=630720000; SameSite=Lax`;
-      localStorage.setItem("stuffed_zoo_pass", body.cookieValue);
+      localStorage.setItem(ZOO_PASSCODE_STORAGE_KEY, body.cookieValue);
+      syncZooPasscodeCookie(body.cookieValue);
     }
     setPasscode("");
     await refetchSession();
@@ -342,6 +344,13 @@ const readJsonResponse = async <T,>(response: Response, label: string) => {
 
 const zooAuthHeaders = (): Record<string, string> => {
   if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("stuffed_zoo_pass");
+  const token = localStorage.getItem(ZOO_PASSCODE_STORAGE_KEY);
+  if (token) syncZooPasscodeCookie(token);
   return token ? { "x-stuffed-zoo-pass": token } : {};
+};
+
+const syncZooPasscodeCookie = (token: string) => {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${ZOO_PASSCODE_STORAGE_KEY}=${encodeURIComponent(token)}; Path=/; Max-Age=${ZOO_PASSCODE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
 };
