@@ -12,6 +12,7 @@ import {
   contactSheetImageFrameClass,
   contactSheetMetaClass,
   contactSheetNameClass,
+  contactSheetPageClass,
   contactSheetPreviewClass,
   contactSheetTitleClass,
 } from "./ContactSheetDialog.styles";
@@ -24,6 +25,17 @@ type ContactSheetDialogProps = {
 };
 
 const printScopeClass = "zoo-contact-sheet-print";
+const animalsPerPrintPage = 24;
+
+const chunkAnimalsForPrint = (animals: ClientAnimal[]) => {
+  const pages: ClientAnimal[][] = [];
+
+  for (let index = 0; index < animals.length; index += animalsPerPrintPage) {
+    pages.push(animals.slice(index, index + animalsPerPrintPage));
+  }
+
+  return pages;
+};
 
 const printStyles = `
 @page {
@@ -49,9 +61,10 @@ const printStyles = `
   }
 
   .${printScopeClass} {
-    position: fixed !important;
-    inset: 0 !important;
-    width: auto !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
     min-height: auto !important;
     overflow: visible !important;
   }
@@ -64,6 +77,7 @@ export function ContactSheetDialog(props: ContactSheetDialogProps) {
       first.name.localeCompare(second.name, undefined, { sensitivity: "base" }),
     ),
   );
+  const printPages = createMemo(() => chunkAnimalsForPrint(sortedAnimals()));
 
   const handlePrint = () => {
     if (typeof window === "undefined") return;
@@ -94,31 +108,37 @@ export function ContactSheetDialog(props: ContactSheetDialogProps) {
     >
       <style>{printStyles}</style>
       <Box class={`${contactSheetPreviewClass} ${printScopeClass}`}>
-        <Box class={contactSheetHeaderClass}>
-          <Box minW="0">
-            <Box class={contactSheetTitleClass}>Stuffed Animal Wish List</Box>
-            <Text color="fg.muted">Circle the friends you want to choose.</Text>
-          </Box>
-          <Box class={contactSheetMetaClass}>{sortedAnimals().length} friends</Box>
-        </Box>
-
         <Show
           when={sortedAnimals().length > 0}
           fallback={<Box class={contactSheetEmptyClass}>Add animals before printing a wish list.</Box>}
         >
-          <Box class={contactSheetGridClass}>
-            <For each={sortedAnimals()}>
-              {(animal) => (
-                <Box class={contactSheetCardClass}>
-                  <Box class={contactSheetCheckClass} aria-hidden="true" />
-                  <Box class={contactSheetImageFrameClass}>
-                    <img src={animal.image.imageUrl} alt={animal.name} loading="eager" />
+          <For each={printPages()}>
+            {(pageAnimals) => (
+              <Box class={contactSheetPageClass}>
+                <Box class={contactSheetHeaderClass}>
+                  <Box minW="0">
+                    <Box class={contactSheetTitleClass}>Stuffed Animal Wish List</Box>
+                    <Text color="fg.muted">Circle the friends you want to choose.</Text>
                   </Box>
-                  <Box class={contactSheetNameClass}>{animal.name}</Box>
+                  <Box class={contactSheetMetaClass}>{sortedAnimals().length} friends</Box>
                 </Box>
-              )}
-            </For>
-          </Box>
+
+                <Box class={contactSheetGridClass}>
+                  <For each={pageAnimals}>
+                    {(animal) => (
+                      <Box class={contactSheetCardClass}>
+                        <Box class={contactSheetCheckClass} aria-hidden="true" />
+                        <Box class={contactSheetImageFrameClass}>
+                          <img src={animal.image.imageUrl} alt={animal.name} loading="eager" />
+                        </Box>
+                        <Box class={contactSheetNameClass}>{animal.name}</Box>
+                      </Box>
+                    )}
+                  </For>
+                </Box>
+              </Box>
+            )}
+          </For>
         </Show>
       </Box>
     </SimpleDialog>

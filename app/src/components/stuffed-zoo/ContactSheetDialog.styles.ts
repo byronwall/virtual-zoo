@@ -30,6 +30,20 @@ export const contactSheetPreviewClass = css({
   },
 });
 
+export const contactSheetPageClass = css({
+  breakAfter: "page",
+  pageBreakAfter: "always",
+  _last: {
+    breakAfter: "auto",
+    pageBreakAfter: "auto",
+  },
+  "@media print": {
+    minH: "10.36in",
+    display: "grid",
+    gridTemplateRows: "auto 1fr",
+  },
+});
+
 export const contactSheetHeaderClass = css({
   display: "flex",
   alignItems: "end",
@@ -75,7 +89,9 @@ export const contactSheetGridClass = css({
   gap: { base: "2", md: "3" },
   "@media print": {
     gridTemplateColumns: "repeat(6, 1fr)",
+    gridTemplateRows: "repeat(4, minmax(0, 1fr))",
     gap: "0.08in",
+    alignContent: "stretch",
   },
 });
 
@@ -83,6 +99,7 @@ export const contactSheetCardClass = css({
   position: "relative",
   minW: "0",
   minH: "150px",
+  overflow: "hidden",
   display: "grid",
   gridTemplateRows: "1fr auto",
   gap: "2",
@@ -94,7 +111,7 @@ export const contactSheetCardClass = css({
   breakInside: "avoid",
   pageBreakInside: "avoid",
   "@media print": {
-    minH: "1.32in",
+    minH: "0",
     gap: "0.03in",
     p: "0.06in",
     borderRadius: "0.08in",
