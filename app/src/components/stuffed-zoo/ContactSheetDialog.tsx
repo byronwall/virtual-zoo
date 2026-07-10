@@ -25,6 +25,7 @@ type ContactSheetDialogProps = {
 };
 
 const printScopeClass = "zoo-contact-sheet-print";
+const printDialogClass = "zoo-contact-sheet-dialog";
 const animalsPerPrintPage = 24;
 
 const chunkAnimalsForPrint = (animals: ClientAnimal[]) => {
@@ -46,13 +47,59 @@ const printStyles = `
 @media print {
   html,
   body {
-    width: 8.5in;
-    min-height: 11in;
+    width: auto;
+    min-height: 0;
+    margin: 0;
     background: white !important;
   }
 
   body * {
     visibility: hidden !important;
+  }
+
+  body > *:not(:has(.${printDialogClass})) {
+    display: none !important;
+  }
+
+  body > :has(.${printDialogClass}) {
+    display: block !important;
+  }
+
+  [data-scope="dialog"][data-part="backdrop"] {
+    display: none !important;
+  }
+
+  [data-scope="dialog"][data-part="positioner"]:has(> .${printDialogClass}) {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .${printDialogClass} {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    animation: none !important;
+  }
+
+  .${printDialogClass} > * {
+    display: none !important;
+  }
+
+  .${printDialogClass} > :has(> .${printScopeClass}) {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
   .${printScopeClass},
@@ -61,10 +108,8 @@ const printStyles = `
   }
 
   .${printScopeClass} {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
+    position: static !important;
+    width: auto !important;
     min-height: auto !important;
     overflow: visible !important;
   }
@@ -93,7 +138,7 @@ export function ContactSheetDialog(props: ContactSheetDialogProps) {
       title="Print wish list"
       description="Preview the contact sheet, then print it for marking favorites by hand."
       maxW="980px"
-      contentClass={contactSheetDialogContentClass}
+      contentClass={`${contactSheetDialogContentClass} ${printDialogClass}`}
       footer={
         <HStack justifyContent="end" gap="2">
           <Button variant="outline" onClick={props.onClose}>

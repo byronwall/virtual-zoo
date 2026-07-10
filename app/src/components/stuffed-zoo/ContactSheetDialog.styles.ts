@@ -38,9 +38,12 @@ export const contactSheetPageClass = css({
     pageBreakAfter: "auto",
   },
   "@media print": {
-    minH: "10.36in",
+    w: "7.86in",
+    h: "10.36in",
+    boxSizing: "border-box",
     display: "grid",
     gridTemplateRows: "auto 1fr",
+    overflow: "hidden",
   },
 });
 
