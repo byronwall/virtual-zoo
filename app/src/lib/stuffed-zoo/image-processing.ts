@@ -21,6 +21,11 @@ const getServiceUrl = () =>
 const shouldUseService = () =>
   (process.env.BACKGROUND_REMOVAL_PROVIDER ?? "rembg") === "rembg";
 
+export const isBackgroundRemovalEnabled = () =>
+  shouldUseService() &&
+  (process.env.NODE_ENV !== "development" ||
+    process.env.BACKGROUND_REMOVAL_IN_DEV === "true");
+
 const postImageForBytes = async (
   endpoint: string,
   bytes: Uint8Array,
@@ -58,7 +63,7 @@ export const queueBackgroundRemoval = (input: {
   unprocessedPath: string;
   processedPath: string;
 }) => {
-  if (!shouldUseService()) return;
+  if (!isBackgroundRemovalEnabled()) return;
   console.info("Queueing stuffed zoo background removal", {
     animalId: input.animalId,
     unprocessedPath: input.unprocessedPath,
@@ -78,7 +83,7 @@ export const queueBackgroundRemoval = (input: {
 };
 
 export const ensureBackgroundRemovalRecoveryStarted = () => {
-  if (recoveryStarted || !shouldUseService()) return;
+  if (recoveryStarted || !isBackgroundRemovalEnabled()) return;
   recoveryStarted = true;
   void recoverBackgroundRemovalQueue().catch((error: unknown) => {
     console.error("Stuffed zoo background removal recovery failed", { error });

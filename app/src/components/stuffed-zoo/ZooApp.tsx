@@ -67,6 +67,7 @@ export function ZooApp() {
 
   createEffect(() => {
     if (!session.latest?.authenticated) return;
+    if (!snapshot.latest?.backgroundRemovalEnabled) return;
     const hasQueuedImages = animals().some(
       (animal) => animal.image.backgroundRemovalStatus === "pending",
     );

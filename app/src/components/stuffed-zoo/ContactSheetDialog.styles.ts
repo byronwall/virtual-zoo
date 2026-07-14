@@ -38,8 +38,8 @@ export const contactSheetPageClass = css({
     pageBreakAfter: "auto",
   },
   "@media print": {
-    w: "7.86in",
-    h: "10.36in",
+    w: "10.36in",
+    h: "7.86in",
     boxSizing: "border-box",
     display: "grid",
     gridTemplateRows: "auto 1fr",
@@ -91,8 +91,8 @@ export const contactSheetGridClass = css({
   },
   gap: { base: "2", md: "3" },
   "@media print": {
-    gridTemplateColumns: "repeat(6, 1fr)",
-    gridTemplateRows: "repeat(4, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gridTemplateRows: "repeat(3, minmax(0, 1fr))",
     gap: "0.08in",
     alignContent: "stretch",
   },
@@ -115,8 +115,9 @@ export const contactSheetCardClass = css({
   pageBreakInside: "avoid",
   "@media print": {
     minH: "0",
-    gap: "0.03in",
-    p: "0.06in",
+    gridTemplateRows: "minmax(0, 1fr) auto",
+    gap: "0.05in",
+    p: "0.07in",
     borderRadius: "0.08in",
     borderColor: "gray.500",
     bg: "white",
@@ -154,6 +155,7 @@ export const contactSheetImageFrameClass = css({
   overflow: "hidden",
   bg: "white",
   "@media print": {
+    aspectRatio: "auto",
     borderRadius: "0.04in",
   },
   "& img": {
@@ -173,8 +175,8 @@ export const contactSheetNameClass = css({
   overflowWrap: "anywhere",
   "@media print": {
     color: "black",
-    fontSize: "7.5pt",
-    lineHeight: "1.05",
+    fontSize: "10pt",
+    lineHeight: "1.1",
   },
 });
 

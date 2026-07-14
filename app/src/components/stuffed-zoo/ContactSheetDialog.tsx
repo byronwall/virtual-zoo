@@ -26,7 +26,8 @@ type ContactSheetDialogProps = {
 
 const printScopeClass = "zoo-contact-sheet-print";
 const printDialogClass = "zoo-contact-sheet-dialog";
-const animalsPerPrintPage = 24;
+const printImageFrameClass = "zoo-contact-sheet-image-frame";
+const animalsPerPrintPage = 15;
 
 const chunkAnimalsForPrint = (animals: ClientAnimal[]) => {
   const pages: ClientAnimal[][] = [];
@@ -40,7 +41,7 @@ const chunkAnimalsForPrint = (animals: ClientAnimal[]) => {
 
 const printStyles = `
 @page {
-  size: letter portrait;
+  size: letter landscape;
   margin: 0.32in;
 }
 
@@ -113,6 +114,11 @@ const printStyles = `
     min-height: auto !important;
     overflow: visible !important;
   }
+
+  .${printImageFrameClass} {
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+  }
 }
 `;
 
@@ -173,7 +179,9 @@ export function ContactSheetDialog(props: ContactSheetDialogProps) {
                     {(animal) => (
                       <Box class={contactSheetCardClass}>
                         <Box class={contactSheetCheckClass} aria-hidden="true" />
-                        <Box class={contactSheetImageFrameClass}>
+                        <Box
+                          class={`${contactSheetImageFrameClass} ${printImageFrameClass}`}
+                        >
                           <img src={animal.image.imageUrl} alt={animal.name} loading="eager" />
                         </Box>
                         <Box class={contactSheetNameClass}>{animal.name}</Box>

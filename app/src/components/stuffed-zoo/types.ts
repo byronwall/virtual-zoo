@@ -14,4 +14,5 @@ export type ZooSnapshot = {
   version: 1;
   animals: ClientAnimal[];
   customTypes: string[];
+  backgroundRemovalEnabled: boolean;
 };

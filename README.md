@@ -52,7 +52,7 @@ Expected data shape:
     processed/
 ```
 
-Background-removal progress is visible in the app and helper service logs. On app startup, queued, failed, and stale processed images are counted and requeued. Each background-removal job logs its animal id, display path, processed path, request id, service completion, output write, thumbnail write, final completion, and remaining retry backlog. The `rembg` service logs matching `request_id` values with start/completion/failure, byte counts, image sizes where available, and elapsed time.
+Background removal is disabled during `pnpm dev` so startup does not scan and process the image backlog. Set `BACKGROUND_REMOVAL_IN_DEV=true` only when running dedicated background-removal checks. In production, queued, failed, and stale processed images are counted and requeued on startup. Each background-removal job logs its animal id, display path, processed path, request id, service completion, output write, thumbnail write, final completion, and remaining retry backlog. The `rembg` service logs matching `request_id` values with start/completion/failure, byte counts, image sizes where available, and elapsed time.
 
 ## Deployment
 

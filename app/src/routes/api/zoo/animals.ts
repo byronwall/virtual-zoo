@@ -1,4 +1,5 @@
 import type { APIEvent } from "@solidjs/start/server";
+import { isBackgroundRemovalEnabled } from "~/lib/stuffed-zoo/image-processing";
 import { requireZooPasscode } from "~/lib/stuffed-zoo/passcode";
 import {
   deleteAnimal,
@@ -59,6 +60,7 @@ export async function GET(event: APIEvent) {
   return Response.json({
     ...snapshot,
     animals,
+    backgroundRemovalEnabled: isBackgroundRemovalEnabled(),
   });
 }
 
