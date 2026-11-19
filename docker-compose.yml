@@ -21,8 +21,9 @@ services:
       STUFFED_ZOO_PASSCODE: ${STUFFED_ZOO_PASSCODE:-passcode}
       BACKGROUND_REMOVAL_PROVIDER: ${BACKGROUND_REMOVAL_PROVIDER:-rembg}
       REMBG_SERVICE_URL: ${REMBG_SERVICE_URL:-http://rembg:7000}
-    ports:
-      - "${APP_PORT:-}:3000"
+    # Traefik reaches this service on the internal network. No host port in production.
+    expose:
+      - "3000"
     volumes:
       - stuffed-zoo-data:/app/data
 
